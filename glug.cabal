@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Lib
                      , SrtExtract
+                     , WordCounter
                      , WordTrie
   build-depends:       attoparsec
                      , base           >= 4.7 && < 5
