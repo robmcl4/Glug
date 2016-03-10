@@ -1,5 +1,6 @@
 module WordCounter (
   countWords
+, WordCount (..)
 )
 where
 
@@ -11,13 +12,28 @@ import Data.List (elemIndex, foldr)
 import Data.Int (Int32)
 
 
-countWords :: SRT.Subtitles -> [(T.Text, Int32)]
-countWords = enumerateTree . (addAllToTree Empty) . (map T.toLower) . wordsInSubtitles
+data WordCount = WordCount { text :: T.Text
+                           , freq :: Int32
+                           , occurances :: [SRT.Time]
+                           } deriving (Show, Eq)
 
 
-wordsInSubtitles :: SRT.Subtitles -> [T.Text]
+addTime :: WordCount -> SRT.Time -> WordCount
+addTime wc t = wc { freq = freq', occurances = occurances' }
+    where freq' = 1 + freq wc
+          occurances' = t : (occurances wc)
+
+
+countWords :: SRT.Subtitles -> [WordCount]
+countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
+
+
+wordsInSubtitles :: SRT.Subtitles -> [(T.Text, SRT.Time)]
 wordsInSubtitles []     = []
-wordsInSubtitles (l:xl) = (wordsInText $ SRT.dialog l) ++ (wordsInSubtitles xl)
+wordsInSubtitles (l:xl) = (addTime . wordsInText $ SRT.dialog l) ++ next
+    where next = wordsInSubtitles xl
+          time = SRT.from . SRT.range $ l
+          addTime = map (flip (,) $ time)
 
 
 wordsInText :: T.Text -> [T.Text]
@@ -26,7 +42,7 @@ wordsInText t
       | T.null nextToc = []
       | otherwise      = nextToc : (wordsInText rest)
     where t'      = T.dropWhile (isSplitToken) t
-          nextToc = T.takeWhile (not . isSplitToken) t'
+          nextToc = T.toLower $ T.takeWhile (not . isSplitToken) t'
           rest    = T.drop (T.length nextToc) t'
 
 
@@ -34,26 +50,26 @@ isSplitToken :: Char -> Bool
 isSplitToken = not . isLetter
 
 
-data Tree = Tree T.Text Int32 Tree Tree
+data Tree = Tree WordCount Tree Tree
           | Empty
 
 
-addToTree :: Tree -> T.Text -> Tree
-addToTree Empty s = Tree s 1 Empty Empty
-addToTree (Tree ts i left right) s
-    | s == ts      = Tree ts (i+1) left right
-    | s < ts       = Tree ts i (addToTree left s) right
-    | s > ts       = Tree ts i left (addToTree right s)
+addToTree :: Tree -> (T.Text, SRT.Time) -> Tree
+addToTree Empty (s, t) = Tree (WordCount s 1 [t]) Empty Empty
+addToTree (Tree wc left right) (s, t)
+    | s == (text wc)      = Tree (addTime wc t) left right
+    | s > (text wc)       = Tree wc (addToTree left (s, t)) right
+    | s < (text wc)       = Tree wc left (addToTree right (s, t))
 
 
-addAllToTree :: Tree -> [T.Text] -> Tree
-addAllToTree tre txts = foldr (flip addToTree) Empty txts
+addAllToTree :: Tree -> [(T.Text, SRT.Time)] -> Tree
+addAllToTree tre txts = foldr (flip addToTree) tre txts
 
 
-enumerateTree :: Tree -> [(T.Text, Int32)]
+enumerateTree :: Tree -> [WordCount]
 enumerateTree t = enumerateTree' t []
 
 
-enumerateTree' :: Tree -> [(T.Text, Int32)] -> [(T.Text, Int32)]
+enumerateTree' :: Tree -> [WordCount] -> [WordCount]
 enumerateTree' Empty xs = xs
-enumerateTree' (Tree txt i left right) xs = enumerateTree' right $ enumerateTree' left $ (txt, i) : xs
+enumerateTree' (Tree wc left right) xs = enumerateTree' right $ enumerateTree' left $ wc : xs
