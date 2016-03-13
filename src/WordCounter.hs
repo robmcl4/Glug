@@ -7,6 +7,7 @@ where
 import qualified Data.Text as T
 import qualified Text.Subtitles.SRT as SRT
 import qualified Text.Subtitles.SRT.Datatypes as SRT
+import qualified Data.Time.Clock as C
 import Data.Char (isLetter)
 import Data.List (elemIndex, foldr)
 import Data.Int (Int32)
@@ -14,11 +15,11 @@ import Data.Int (Int32)
 
 data WordCount = WordCount { text :: T.Text
                            , freq :: Int32
-                           , occurances :: [SRT.Time]
+                           , occurances :: [C.DiffTime]
                            } deriving (Show, Eq)
 
 
-addTime :: WordCount -> SRT.Time -> WordCount
+addTime :: WordCount -> C.DiffTime -> WordCount
 addTime wc t = wc { freq = freq', occurances = occurances' }
     where freq' = 1 + freq wc
           occurances' = t : (occurances wc)
@@ -28,11 +29,11 @@ countWords :: SRT.Subtitles -> [WordCount]
 countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
 
 
-wordsInSubtitles :: SRT.Subtitles -> [(T.Text, SRT.Time)]
+wordsInSubtitles :: SRT.Subtitles -> [(T.Text, C.DiffTime)]
 wordsInSubtitles []     = []
 wordsInSubtitles (l:xl) = (addTime . wordsInText $ SRT.dialog l) ++ next
     where next = wordsInSubtitles xl
-          time = SRT.from . SRT.range $ l
+          time = toDiffTime $ SRT.from . SRT.range $ l
           addTime = map (flip (,) $ time)
 
 
@@ -54,7 +55,7 @@ data Tree = Tree WordCount Tree Tree
           | Empty
 
 
-addToTree :: Tree -> (T.Text, SRT.Time) -> Tree
+addToTree :: Tree -> (T.Text, C.DiffTime) -> Tree
 addToTree Empty (s, t) = Tree (WordCount s 1 [t]) Empty Empty
 addToTree (Tree wc left right) (s, t)
     | s == (text wc)      = Tree (addTime wc t) left right
@@ -62,7 +63,7 @@ addToTree (Tree wc left right) (s, t)
     | s < (text wc)       = Tree wc left (addToTree right (s, t))
 
 
-addAllToTree :: Tree -> [(T.Text, SRT.Time)] -> Tree
+addAllToTree :: Tree -> [(T.Text, C.DiffTime)] -> Tree
 addAllToTree tre txts = foldr (flip addToTree) tre txts
 
 
@@ -73,3 +74,8 @@ enumerateTree t = enumerateTree' t []
 enumerateTree' :: Tree -> [WordCount] -> [WordCount]
 enumerateTree' Empty xs = xs
 enumerateTree' (Tree wc left right) xs = enumerateTree' right $ enumerateTree' left $ wc : xs
+
+
+toDiffTime :: SRT.Time -> C.DiffTime
+toDiffTime t = C.secondsToDiffTime . toInteger $
+      (SRT.hour t) * 60 * 60 + (SRT.minutes t) * 60 + (SRT.seconds t)
