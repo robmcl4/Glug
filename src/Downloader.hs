@@ -18,11 +18,11 @@ import qualified Network.HTTP as HTTP
 import qualified Network.HTTP.Base as HTB
 import qualified Network.HTTP.Headers as HTH
 import qualified Text.HTML.TagSoup as TS
-import Control.Monad (liftM)
 import Data.List (find, group, sort)
 import Text.Read (readEither)
 import Network.BufferType (BufferType)
 import Network.Stream (Result)
+import Control.Monad.Except
 
 
 import Debug.Trace (traceShow)
@@ -42,14 +42,15 @@ data TitleCtx = TitleCtx { url :: String } deriving (Show, Eq)
 
 
 instance Serializable TitleCtx where
-    serialize = undefined
-    deserialize = undefined
+    serialize (TitleCtx url) =  B.pack . map (B.c2w) $ url
+    deserialize = Just . TitleCtx . (map (B.w2c)) . B.unpack
 
 
 candidateTitles :: String -> IO (Either String [(String, Integer, TitleCtx)])
-candidateTitles s = do
+candidateTitles s = runExceptT $ do
     soup <- getSoup $ searchurl ++ (quote_plus s)
-    return $ soup >>= getTitles >>= Right . conv . dedup
+    titles <- liftEither $ getTitles soup
+    return . conv . dedup $ titles
   where dedup = map (head) . group . sort
         conv [] = []
         conv ((ttl, hrf, i):xs) = (bsl2str ttl, i, TitleCtx {url = bsl2str hrf}) : conv xs
@@ -83,29 +84,37 @@ getTitles ((TS.TagOpen name attrs): xs)
 getTitles (x:xs) = getTitles xs
 
 
-getSoup :: String -> IO (Either String [TS.Tag BSL.ByteString])
-getSoup s = makeGet s >>= \eith -> case eith of
-                Left s -> return $ Left s
-                Right bs -> return . Right $ TS.parseTags bs
+getSoup :: String -> ExceptT String IO ([TS.Tag BSL.ByteString])
+getSoup s = makeGet s >>= return . TS.parseTags
 
 
-makeGet :: String -> IO (Either String BSL.ByteString)
-makeGet url = case uri of
-                  Nothing -> return $ Left "Could not parse URI"
-                  Just uri' -> makeGetReq (req uri')
-    where uri = URI.parseURI url
+makeGet :: String -> ExceptT String IO BSL.ByteString
+makeGet url = liftEither uri >>= makeGetReq . req
+    where uri = fromMaybe (URI.parseURI url) "Could not parse URI"
           req u = HTH.replaceHeader HTH.HdrUserAgent useragent $ HTB.mkRequest HTB.GET u
 
 
-makeGetReq :: HTB.Request BSL.ByteString -> IO (Either String BSL.ByteString)
-makeGetReq r = HTTP.simpleHTTP r >>= \r' -> case r' of
-                 Left c -> return . Left $ show c
-                 Right resp -> case HTB.rspCode resp of
-                                (2, _, _) -> return . Right $ HTB.rspBody resp
-                                (3, _, _) -> case HTH.findHeader HTH.HdrLocation resp of
-                                              Nothing -> return $ Left "No redirect location given"
-                                              Just s -> makeGet s
-                                _         -> return $ Left "bad status code"
+makeGetReq :: HTB.Request BSL.ByteString -> ExceptT String IO BSL.ByteString
+makeGetReq r = do
+    resp <- (withExceptT show) . ExceptT $ HTTP.simpleHTTP r
+    case HTB.rspCode resp of
+      (2, _, _) -> return $ HTB.rspBody resp
+      (3, _, _) -> (liftEither $ findHeader resp HTH.HdrLocation) >>= makeGet
+      _         -> throwError "bad status code"
+
+----------------- Utilities -----------------
+
+liftEither :: Either a b -> ExceptT a IO b
+liftEither = ExceptT . return
+
+
+findHeader :: HTH.HasHeaders a => a -> HTH.HeaderName -> Either String String
+findHeader a h = fromMaybe (HTH.findHeader h a) ("Could not find header " ++ (show h))
+
+
+fromMaybe :: Maybe b -> String -> Either String b
+fromMaybe Nothing s = Left s
+fromMaybe (Just x) _ = Right x
 
 
 bsl2str :: BSL.ByteString -> String
