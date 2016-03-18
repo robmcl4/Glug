@@ -34,3 +34,13 @@ spec = do
       (containsStr trie "foobar") `shouldBe` True
       (containsStr trie "barbaz") `shouldBe` True
       (containsStr trie "barber") `shouldBe` False
+
+    it "can add prefixes" $ do
+      let trie = makeTrieWithWords ["foobar", "foo"]
+      (containsStr trie "foobar") `shouldBe` True
+      (containsStr trie "foo") `shouldBe` True
+
+    it "can add longer words" $ do
+      let trie = makeTrieWithWords ["you", "your"]
+      (containsStr trie "you") `shouldBe` True
+      (containsStr trie "your") `shouldBe` True
