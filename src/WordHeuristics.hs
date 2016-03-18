@@ -7,6 +7,7 @@ where
 
 import qualified Data.Text as T
 import qualified WordCounter as WC
+import qualified WordTrie as WT (commonWords, containsStr)
 import qualified Data.Time.Clock as C
 import Data.Int (Int32)
 import Data.List (sort)
@@ -22,13 +23,18 @@ instance Ord WordRank where
 
 
 bestCandidates :: [WC.WordCount] -> (Integer, Integer)-> [WordRank]
-bestCandidates wcs range = sort . addTimeGap . addSyllable . initWr $ dropWordsByFrequency wcs range
+bestCandidates wcs range = sort . addIsCommon . addTimeGap . addSyllable . initWr $ dropWordsByFrequency wcs range
   where initWr wcs = map (flip WordRank $ 0) wcs
 
 
 dropWordsByFrequency :: [WC.WordCount] -> (Integer, Integer) -> [WC.WordCount]
 dropWordsByFrequency wcs (min_, max_) = filter (between . toInteger . WC.freq) wcs
     where between x = x >= min_ && x <= max_
+
+
+addIsCommon :: [WordRank] -> [WordRank]
+addIsCommon = flip addToHeuristic $ \wc -> if isCommon $ WC.text wc then 0 else 4
+    where isCommon = WT.containsStr WT.commonWords . T.unpack
 
 
 addSyllable :: [WordRank] -> [WordRank]
