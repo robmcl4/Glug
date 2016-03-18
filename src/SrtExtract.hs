@@ -14,38 +14,27 @@ import Data.Char (isSpace)
 import Data.Attoparsec.Text (parseOnly, maybeResult)
 
 
-parseSrtFromZip :: B.ByteString -> Maybe SRT.Subtitles
-parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToMaybeSubs
+parseSrtFromZip :: B.ByteString -> Either String SRT.Subtitles
+parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs
 
 
-bsToMaybeSubs :: B.ByteString -> Maybe SRT.Subtitles
-bsToMaybeSubs bs = do
-    t <- text
-    case parseOnly SRT.parseSRT t of
-          Left _  -> Nothing
-          Right s -> Just s
-    where text = case Enc.decodeUtf8' bs of
-                   Left  _ -> Nothing
-                   Right t -> Just $ T.toStrict t
+bsToSubs :: B.ByteString -> Either String SRT.Subtitles
+bsToSubs bs = do
+    t <- eitherShow $ Enc.decodeUtf8' bs
+    parseOnly SRT.parseSRT $ T.toStrict t
 
 
-getSrtBS :: B.ByteString -> Maybe B.ByteString
+getSrtBS :: B.ByteString -> Either String B.ByteString
 getSrtBS bs = do
-    arch <- toArchive bs
+    arch <- Z.toArchiveOrFail bs
     entry <- getEntry arch
     return $ B.drop 3 $ Z.fromEntry entry
 
 
-toArchive :: B.ByteString -> Maybe Z.Archive
-toArchive bs = case Z.toArchiveOrFail bs of
-        Left _  -> Nothing
-        Right a -> Just a
-
-
-getEntry :: Z.Archive -> Maybe Z.Entry
+getEntry :: Z.Archive -> Either String Z.Entry
 getEntry arch = do
-    fp <- find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
-    Z.findEntryByPath fp arch
+    fp <- fromMaybe "could not find srt" $ find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
+    fromMaybe "wat?" (Z.findEntryByPath fp arch)
 
 
 endsIn :: String -> String -> Bool
@@ -53,3 +42,13 @@ endsIn []     [] = True
 endsIn (x:_)  [] = False
 endsIn []  (x:_) = False
 endsIn (x:xs) (y:ys) = (x == y && endsIn xs ys) || endsIn xs (y:ys)
+
+
+fromMaybe :: String -> Maybe b -> Either String b
+fromMaybe s Nothing = Left s
+fromMaybe _ (Just x) = Right x
+
+
+eitherShow :: Show a => Either a b -> Either String b
+eitherShow (Left x) = Left (show x)
+eitherShow (Right x) = Right x

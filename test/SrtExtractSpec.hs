@@ -13,12 +13,12 @@ spec = do
   describe "parseSrtFromZip" $ do
     it "returns the subs when correct" $ do
       let subs = case parseSrtFromZip zipWithSubs of
-                   Nothing -> error "could not parse srt!"
-                   Just subs -> subs
+                   Left s -> error $ "could not parse srt!: " ++ s
+                   Right subs -> subs
       (length subs) `shouldBe` 1
 
-    it "returns Nothing when no SRT exists" $ do
-      (parseSrtFromZip zipWithNoSubs) `shouldBe` Nothing
+    it "returns Left when no SRT exists" $ do
+      (parseSrtFromZip zipWithNoSubs) `shouldBe` (Left "could not find srt")
 
 
 zipWithNoSubs = decodeB64 "\

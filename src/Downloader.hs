@@ -2,10 +2,8 @@
 
 module Downloader (
   candidateTitles
-, Serializable (..)
-, TitleCtx ()
-, getSoup
-, getTitles
+, candidateSubtitles
+, getSubtitles
 )
 where
 
@@ -18,70 +16,44 @@ import qualified Network.HTTP as HTTP
 import qualified Network.HTTP.Base as HTB
 import qualified Network.HTTP.Headers as HTH
 import qualified Text.HTML.TagSoup as TS
+import qualified Text.Subtitles.SRT as SRT
+
+import Data.Char (isSpace)
 import Data.List (find, group, sort)
 import Text.Read (readEither)
 import Network.BufferType (BufferType)
 import Network.Stream (Result)
 import Control.Monad.Except
 
+import SrtExtract (parseSrtFromZip)
 
-import Debug.Trace (traceShow)
-
+import Debug.Trace (trace)
 
 searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
 useragent = "haskell/glug"
 
 
-class  Serializable a  where
-    serialize :: a -> B.ByteString
-    deserialize :: B.ByteString -> Maybe a
+getSubtitles :: String -> IO (Either String SRT.Subtitles)
+getSubtitles s = runExceptT $ do
+    soup <- getSoup $ subscenebase ++ s
+    downLink <- liftEither $ getDownloadLink soup
+    subs <- makeGet (subscenebase ++ (bsl2str downLink))
+    liftEither $ parseSrtFromZip subs
 
 
-data TitleCtx = TitleCtx { url :: String } deriving (Show, Eq)
+candidateSubtitles :: String -> IO (Either String [BSL.ByteString])
+candidateSubtitles s = runExceptT $ do
+    soup <- getSoup $ subscenebase ++ s
+    liftEither $ getSubLinks soup
 
 
-instance Serializable TitleCtx where
-    serialize (TitleCtx url) =  B.pack . map (B.c2w) $ url
-    deserialize = Just . TitleCtx . (map (B.w2c)) . B.unpack
-
-
-candidateTitles :: String -> IO (Either String [(String, Integer, TitleCtx)])
+candidateTitles :: String -> IO (Either String [(BSL.ByteString, BSL.ByteString, Integer)])
 candidateTitles s = runExceptT $ do
     soup <- getSoup $ searchurl ++ (quote_plus s)
     titles <- liftEither $ getTitles soup
-    return . conv . dedup $ titles
+    return . dedup $ titles
   where dedup = map (head) . group . sort
-        conv [] = []
-        conv ((ttl, hrf, i):xs) = (bsl2str ttl, i, TitleCtx {url = bsl2str hrf}) : conv xs
-
-
-getTitles :: [TS.Tag BSL.ByteString] -> Either String [(BSL.ByteString, BSL.ByteString, Integer)]
-getTitles [] = Right []
-getTitles ((TS.TagOpen name attrs): xs)
-    | name == "div" && attrs == [("class", "title")] = do
-        (href, title, rest) <- findHrefTitle xs
-        (i, rest') <- findCount rest
-        next <- getTitles rest'
-        Right $ (href, title, i) : next
-    | otherwise = getTitles xs
-  where findHrefTitle [] = Left "No title found"
-        findHrefTitle ((TS.TagOpen name attrs):
-                       (TS.TagText title): ts)
-            | name == "a"   = href >>= \h -> Right (h, title, ts)
-          where href = case find ((== "href") . fst) attrs of
-                        Nothing -> Left "no href found"
-                        Just (_, href) -> Right href
-        findHrefTitle (t:ts) = findHrefTitle ts
-        findCount [] = Left "No count found"
-        findCount ((TS.TagOpen name attrs):(TS.TagText txt):ts)
-            | name == "div" && attrs == [("class", "subtle count")] = do
-                i <- readEither txt' :: Either String Integer
-                Right (i, ts)
-            | otherwise = findCount ts
-          where txt' = takeWhile (/= ' ') . bsl2str $ txt
-        findCount (t:ts) = findCount ts
-getTitles (x:xs) = getTitles xs
 
 
 getSoup :: String -> ExceptT String IO ([TS.Tag BSL.ByteString])
@@ -102,7 +74,69 @@ makeGetReq r = do
       (3, _, _) -> (liftEither $ findHeader resp HTH.HdrLocation) >>= makeGet
       _         -> throwError "bad status code"
 
------------------ Utilities -----------------
+-- ----------------------------- Soup Handling ------------------------------ --
+
+getDownloadLink :: [TS.Tag BSL.ByteString] -> Either String BSL.ByteString
+getDownloadLink [] = Left "no download link found"
+getDownloadLink ((TS.TagOpen name attrs):xs)
+    | name == "a" && ("id", "downloadButton") `elem` attrs
+                = eitherAttr attrs "href"
+    | otherwise = getDownloadLink xs
+getDownloadLink (x:xs) = getDownloadLink xs
+
+
+getSubLinks :: [TS.Tag BSL.ByteString] -> Either String [BSL.ByteString]
+getSubLinks [] = Right []
+getSubLinks ((TS.TagOpen name1 attrs1):
+             (TS.TagText _):
+             (TS.TagOpen name2 attrs2):
+             (TS.TagText engl):
+             ts)
+    | name1 == "a" && name2 == "span" && (removeSpaces engl) == "English" && attrs2 == [("class", "l r positive-icon")]
+                = do
+                    hrf <- eitherAttr attrs1 "href"
+                    rest <- getSubLinks ts
+                    return (hrf:rest)
+    | otherwise = getSubLinks ((TS.TagOpen name2 attrs2):((TS.TagText engl):ts))
+  where removeSpaces = BSL.filter (not . isSpace . B.w2c)
+getSubLinks (t:ts) = getSubLinks ts
+
+
+getTitles :: [TS.Tag BSL.ByteString] -> Either String [(BSL.ByteString, BSL.ByteString, Integer)]
+getTitles [] = Right []
+getTitles ((TS.TagOpen name attrs): xs)
+    | name == "div" && attrs == [("class", "title")] = do
+        (href, title, rest) <- findHrefTitle xs
+        (i, rest') <- findCount rest
+        next <- getTitles rest'
+        Right $ (href, title, i) : next
+    | otherwise = getTitles xs
+  where findHrefTitle [] = Left "No title found"
+        findHrefTitle ((TS.TagOpen name attrs):
+                       (TS.TagText title): ts)
+            | name == "a"   = href >>= \h -> Right (h, title, ts)
+            | otherwise     = findHrefTitle ts
+          where href = eitherAttr attrs "href"
+        findHrefTitle (t:ts) = findHrefTitle ts
+        findCount [] = Left "No count found"
+        findCount ((TS.TagOpen name attrs):(TS.TagText txt):ts)
+            | name == "div" && attrs == [("class", "subtle count")]
+                        = readEither txt' >>= \i -> return (i, ts)
+            | otherwise = findCount ts
+          where txt' = takeWhile (/= ' ') . bsl2str $ txt
+        findCount (t:ts) = findCount ts
+getTitles (x:xs) = getTitles xs
+
+
+-- -------------------------------- Utilities ------------------------------- --
+
+eitherAttr :: [(BSL.ByteString, BSL.ByteString)] -> BSL.ByteString
+                  -> Either String BSL.ByteString
+eitherAttr [] s = Left $ "could not find attr " ++ (bsl2str s)
+eitherAttr ((k, v):xs) s
+    | k == s    = Right v
+    | otherwise = eitherAttr xs s
+
 
 liftEither :: Either a b -> ExceptT a IO b
 liftEither = ExceptT . return
