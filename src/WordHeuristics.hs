@@ -8,7 +8,6 @@ where
 import qualified Data.Text as T
 import qualified WordCounter as WC
 import qualified WordTrie as WT (commonWords, containsStr)
-import qualified Data.Time.Clock as C
 import Data.Int (Int32)
 import Data.List (sort)
 
@@ -23,8 +22,8 @@ instance Ord WordRank where
 
 
 bestCandidates :: [WC.WordCount] -> (Integer, Integer)-> [WordRank]
-bestCandidates wcs range = sort . addIsCommon . addTimeGap . addSyllable . initWr $ dropWordsByFrequency wcs range
-  where initWr wcs = map (flip WordRank $ 0) wcs
+bestCandidates wcs range = sort . addIsCommon . addTimeGap . addSyllable . toWr $ dropWordsByFrequency wcs range
+  where toWr wcs_ = map (flip WordRank $ 0) wcs_
 
 
 dropWordsByFrequency :: [WC.WordCount] -> (Integer, Integer) -> [WC.WordCount]
@@ -46,11 +45,12 @@ addTimeGap wrs = flip addToHeuristic (timegap) wrs
     where timegap wc = round $ (mingap wc) / (expected wc) * 10
           expected = ((toRational maxtime) /) . fromIntegral . WC.freq
           mingap = minimum . difflist . map (toRational) . WC.occurances
-          difflist (x:[]) = []
+          difflist [] = []
+          difflist (_:[]) = []
           difflist (x:y:xs) = (y - x) : difflist (y:xs)
           maxtime = maximum . concat . map (WC.occurances . wordcount) $ wrs
 
 
 addToHeuristic :: [WordRank] -> (WC.WordCount -> Int32) -> [WordRank]
-addToHeuristic wr f = map (bumpHeu) wr
+addToHeuristic wrs f = map (bumpHeu) wrs
     where bumpHeu wr = wr { heuristic = (heuristic wr + (f $ wordcount wr)) }

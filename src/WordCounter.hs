@@ -6,10 +6,8 @@ where
 
 import qualified Data.Text as T
 import qualified Text.Subtitles.SRT as SRT
-import qualified Text.Subtitles.SRT.Datatypes as SRT
 import qualified Data.Time.Clock as C
 import Data.Char (isLetter)
-import Data.List (elemIndex, foldr)
 import Data.Int (Int32)
 
 
@@ -31,10 +29,10 @@ countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
 
 wordsInSubtitles :: SRT.Subtitles -> [(T.Text, C.DiffTime)]
 wordsInSubtitles []     = []
-wordsInSubtitles (l:xl) = (addTime . wordsInText $ SRT.dialog l) ++ next
+wordsInSubtitles (l:xl) = (includeTime . wordsInText $ SRT.dialog l) ++ next
     where next = wordsInSubtitles xl
           time = toDiffTime $ SRT.from . SRT.range $ l
-          addTime = map (flip (,) $ time)
+          includeTime = map (\t -> (t, time))
 
 
 wordsInText :: T.Text -> [T.Text]
@@ -60,7 +58,7 @@ addToTree Empty (s, t) = Tree (WordCount s 1 [t]) Empty Empty
 addToTree (Tree wc left right) (s, t)
     | s == (text wc)      = Tree (addTime wc t) left right
     | s > (text wc)       = Tree wc (addToTree left (s, t)) right
-    | s < (text wc)       = Tree wc left (addToTree right (s, t))
+    | otherwise           = Tree wc left (addToTree right (s, t))
 
 
 addAllToTree :: Tree -> [(T.Text, C.DiffTime)] -> Tree

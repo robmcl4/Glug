@@ -7,8 +7,6 @@ module Downloader (
 where
 
 
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Internal as B (w2c, c2w)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
@@ -21,15 +19,15 @@ import qualified Text.HTML.TagSoup as TS
 import qualified Text.Subtitles.SRT as SRT
 
 import Data.Char (isSpace)
-import Data.List (find, group, sort, sortOn)
+import Data.List (group, sort, sortOn)
 import Text.Read (readEither)
-import Network.BufferType (BufferType)
-import Network.Stream (Result)
-import Control.Monad (mplus)
 import Control.Monad.Except
 
 import SrtExtract (parseSrtFromZip)
 
+searchurl :: String
+subscenebase :: String
+useragent :: String
 searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
 useragent = "haskell/glug"
@@ -41,8 +39,8 @@ getSubtitles s = runExceptT $ do
     getSub cands
   where getSub [] = throwError "No subtitles found"
         getSub (x:xs) = (subAt $ T.unpack x) `mplus` (getSub xs)
-        subAt s = do
-            soup <- getSoup $ subscenebase ++ s
+        subAt subpath = do
+            soup <- getSoup $ subscenebase ++ subpath
             downLink <- liftEither $ getDownloadLink soup
             subs <- makeGet (subscenebase ++ (T.unpack downLink))
             liftEither $ parseSrtFromZip subs
@@ -92,7 +90,7 @@ getDownloadLink ((TS.TagOpen name attrs):xs)
     | name == "a" && ("id", "downloadButton") `elem` attrs
                 = eitherAttr attrs "href"
     | otherwise = getDownloadLink xs
-getDownloadLink (x:xs) = getDownloadLink xs
+getDownloadLink (_:xs) = getDownloadLink xs
 
 
 getSubLinks :: [TS.Tag T.Text] -> Either String [T.Text]
@@ -109,7 +107,7 @@ getSubLinks ((TS.TagOpen name1 attrs1):
                     return ((hrf):rest)
     | otherwise = getSubLinks ((TS.TagOpen name2 attrs2):((TS.TagText engl):ts))
   where removeSpaces = T.filter (not . isSpace)
-getSubLinks (t:ts) = getSubLinks ts
+getSubLinks (_:ts) = getSubLinks ts
 
 
 getTitles :: [TS.Tag T.Text] -> Either String [(T.Text, T.Text, Integer)]
@@ -122,22 +120,21 @@ getTitles ((TS.TagOpen name attrs): xs)
         Right $ (href, title, i) : next
     | otherwise = getTitles xs
   where findHrefTitle [] = Left "No title found"
-        findHrefTitle ((TS.TagOpen name attrs):
+        findHrefTitle ((TS.TagOpen name' attrs'):
                        (TS.TagText title): ts)
-            | name == "a"   = do
-                href <- eitherAttr attrs "href"
+            | name' == "a" = do
+                href <- eitherAttr attrs' "href"
                 Right (href, title, ts)
             | otherwise     = findHrefTitle ts
-          where href = eitherAttr attrs "href"
-        findHrefTitle (t:ts) = findHrefTitle ts
+        findHrefTitle (_:ts) = findHrefTitle ts
         findCount [] = Left "No count found"
-        findCount ((TS.TagOpen name attrs):(TS.TagText txt):ts)
-            | name == "div" && attrs == [("class", "subtle count")]
+        findCount ((TS.TagOpen name' attrs'):(TS.TagText txt):ts)
+            | name' == "div" && attrs' == [("class", "subtle count")]
                         = readEither txt' >>= \i -> return (i, ts)
             | otherwise = findCount ts
           where txt' = takeWhile (/= ' ') . T.unpack $ txt
-        findCount (t:ts) = findCount ts
-getTitles (x:xs) = getTitles xs
+        findCount (_:ts) = findCount ts
+getTitles (_:xs) = getTitles xs
 
 
 -- -------------------------------- Utilities ------------------------------- --

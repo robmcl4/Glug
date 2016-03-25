@@ -19,20 +19,12 @@ commonWords :: Trie
 commonWords = makeTrieWithWords wrds
 
 
-insertToTree :: Tree -> Char -> Tree
-insertToTree Empty c = Tree c makeTrie Empty Empty
-insertToTree (Tree x t left right) c
-    | c == x    = Tree x t left right
-    | c <  x    = Tree x t (insertToTree left c) right
-    | c >  x    = Tree x t left (insertToTree right c)
-
-
 findFromTree :: Tree -> Char -> Maybe Trie
 findFromTree Empty _ = Nothing
 findFromTree (Tree x t left right) c
     | c == x    = Just t
     | c <  x    = findFromTree left c
-    | c >  x    = findFromTree right c
+    | otherwise = findFromTree right c
 
 
 findAndModify  :: Tree -> Char -> (Maybe Trie -> Trie) -> Tree
@@ -40,10 +32,10 @@ findAndModify Empty c f = Tree c (f Nothing) Empty Empty
 findAndModify (Tree x t left right) c f
     | c == x    = Tree x (f $ Just t) left right
     | c <  x    = Tree x t (findAndModify left c f) right
-    | c >  x    = Tree x t left (findAndModify right c f)
+    | otherwise = Tree x t left (findAndModify right c f)
 
 
-data Trie = Trie { term :: Bool, tre :: Tree }
+data Trie = Trie Bool Tree
 
 
 makeTrie :: Trie
@@ -56,7 +48,8 @@ makeTrieWithWords = foldl' (addStr) makeTrie
 
 addStr :: Trie -> String -> Trie
 addStr (Trie trm Empty) s  = let tri = mkTrieOfString s
-                              in tri { term = (term tri) || trm }
+                              in case tri of
+                                Trie trm' tre -> Trie (trm' || trm) tre
 addStr (Trie trm t) (x:[]) = Trie trm (findAndModify t x (\mtri ->
         case mtri of
             Nothing -> Trie True Empty
@@ -67,12 +60,13 @@ addStr (Trie trm t) (x:xs) = Trie trm (findAndModify t x (\mtri ->
             Nothing  -> mkTrieOfString xs
             Just tri -> addStr tri xs
     ))
+addStr t [] = t
 
 
 containsStr :: Trie -> String -> Bool
 containsStr (Trie term _)  []     = term
 containsStr (Trie _ Empty) _      = False
-containsStr (Trie term t)  (x:xs) = case findFromTree t x of
+containsStr (Trie _ t)  (x:xs) = case findFromTree t x of
         Nothing              -> False
         Just (Trie term' t') -> containsStr (Trie term' t') xs
 

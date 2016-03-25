@@ -10,8 +10,7 @@ import qualified Codec.Archive.Zip as Z
 import qualified Text.Subtitles.SRT as SRT
 
 import Data.List (find)
-import Data.Char (isSpace)
-import Data.Attoparsec.Text (parseOnly, maybeResult)
+import Data.Attoparsec.Text (parseOnly)
 
 
 parseSrtFromZip :: B.ByteString -> Either String SRT.Subtitles
@@ -34,13 +33,13 @@ getSrtBS bs = do
 getEntry :: Z.Archive -> Either String Z.Entry
 getEntry arch = do
     fp <- fromMaybe "could not find srt" $ find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
-    fromMaybe "wat?" (Z.findEntryByPath fp arch)
+    fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fp arch)
 
 
 endsIn :: String -> String -> Bool
 endsIn []     [] = True
-endsIn (x:_)  [] = False
-endsIn []  (x:_) = False
+endsIn (_:_)  [] = False
+endsIn []  (_:_) = False
 endsIn (x:xs) (y:ys) = (x == y && endsIn xs ys) || endsIn xs (y:ys)
 
 
