@@ -4,15 +4,18 @@ module Main where
 
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
+import qualified Data.Text as TS
 import qualified Text.Subtitles.SRT as SRT
 import Data.Char (isLatin1)
 import Data.List (sortOn)
 import System.IO (hFlush, stdout)
 import Text.Read (readEither)
+import Control.Monad (liftM, mzero, forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 
 import Downloader
+import WordCounter
 import WordHeuristics
 
 type MaybeIO = MaybeT IO
@@ -20,53 +23,76 @@ type MaybeIO = MaybeT IO
 
 main :: IO (Maybe ())
 main = runMaybeT $ do
-    ttls <- MaybeT $ getCandidateTitles
-    lnk <- MaybeT $ chooseTitle ttls
-    subs <- MaybeT $ getSubs lnk
-    return ()
+  ttls <- getCandidateTitles
+  lnk <- chooseTitle ttls
+  subs <- getSubs lnk
+  liftIO $ printBest subs
 
 
-getCandidateTitles :: IO (Maybe [(T.Text, T.Text, Integer)])
+getCandidateTitles :: MaybeIO [(T.Text, T.Text, Integer)]
 getCandidateTitles = do
-    putStr "Enter movie title: " >> hFlush stdout
-    mov <- getLine
-    titles <- candidateTitles mov
+    mov <- prompt "Enter movie title: "
+    titles <- liftIO $ candidateTitles mov
     case titles of
-        Left s -> do
-                    putStrLn $ "Could not find title (" ++ s ++ ")"
-                    return Nothing
-        Right s -> do
-                    if null s
-                      then putStrLn "No titles found" >> return Nothing
-                      else return $ Just s
+        Left s -> putStrLn' $ "Could not find title (" ++ s ++ ")"
+        Right s -> if null s
+                      then putStrLn' "No titles found"
+                      else return s
 
 
-chooseTitle :: [(T.Text, T.Text, Integer)] -> IO (Maybe T.Text)
-chooseTitle [] = putStrLn "No titles to show." >> return Nothing
+chooseTitle :: [(T.Text, T.Text, Integer)] -> MaybeIO T.Text
+chooseTitle [] = putStrLn' "No titles to show."
 chooseTitle bs = do
-    printTitles bs' 1
-    putStr "Select Number ('n' for next): " >> hFlush stdout
-    n <- getLine
+    liftIO $ printTitles bs'
+    n <- prompt "Select Number ('n' for next): "
     case n of
-      "n" -> chooseTitle $ drop 5 bs
-      x -> case readEither x :: Either String Integer of
-              Left _ -> putStrLn "Could not understand input" >> chooseTitle bs
+      "n" -> chooseTitle rest
+      x   -> case readEither x :: Either String Integer of
+              Left _ -> liftIO (putStrLn "Could not understand input") >> chooseTitle bs
               Right i -> if 1 <= i && i <= (toInteger $ length bs')
-                         then return . Just . getLnk $ bs' !! (fromIntegral i-1)
-                         else putStrLn "Number out of range" >> chooseTitle bs
+                         then return . getLnk $ bs' !! (fromIntegral i-1)
+                         else liftIO (putStrLn "Number out of range") >> chooseTitle bs
     where bs' = take 5 bs
-          printTitle (_, t, n) i = T.putStrLn . sanitizeForPrint $ T.concat ["[", T.pack $ show i, "] ", t, " - ", T.pack $ show n]
-          printTitles [] _ = return ()
-          printTitles (x:xs) i = (printTitle x i) >> (printTitles xs (i+1))
+          rest = drop 5 bs
+          printTitle (_, t, n) i = putStrLn $ "[" ++ show i ++ "] " ++ (T.unpack . sanitizeForPrint $ t) ++ " - " ++ show n
+          printTitles xs = forM_ (zip xs [1..]) (uncurry printTitle)
           getLnk (l, _, _) = l
 
 
-getSubs :: T.Text -> IO (Maybe SRT.Subtitles)
+getSubs :: T.Text -> MaybeIO SRT.Subtitles
 getSubs s = do
-    subs <- getSubtitles $ T.unpack s
+    subs <- liftIO $ getSubtitles $ T.unpack s
     case subs of
-      Left s -> (putStrLn $ "Could not find .srt: " ++ s) >> return Nothing
-      Right s -> return . Just $ s
+      Left s -> putStrLn' $ "Could not find .srt: " ++ s
+      Right s -> return s
+
+
+printBest :: SRT.Subtitles -> IO ()
+printBest s = printWrs best
+  where best = (take 8) $ bestCandidates wcs (3, 7)
+        wcs = countWords s
+        printWrs xs = forM_ xs printWr
+        printWr = putStrLn . wrtos
+        wrtos wr = wctos . wordcount $ wr
+        wctos wc = (TS.unpack . text $ wc) ++ ": " ++ (show . freq $ wc) ++ "\n" ++ occViz wc
+        occViz wc = "[" ++ (dashes . map (dashLoc) $ occurances wc) ++ "]"
+        dashes xs = addDash xs ndashes
+        addDash [] _ = ""
+        addDash _  0 = ""
+        addDash occ n = (if (ndashes - n) `elem` occ then 'X' else '-') : (addDash occ (n-1))
+        dashLoc dt = round $ toRational (dt / maxtime) * toRational ndashes
+        ndashes = 80 :: Integer
+        maxtime = maximum . concat . map (occurances) $ wcs
+
+
+-- ---------------------------- Utilities ----------------------------------- --
+
+prompt :: String -> MaybeIO String
+prompt s = MaybeT $ putStr s >> hFlush stdout >> liftM (Just) getLine
+
+
+putStrLn' :: String -> MaybeIO a
+putStrLn' s = liftIO $ putStrLn s >> mzero
 
 
 sanitizeForPrint :: T.Text -> T.Text

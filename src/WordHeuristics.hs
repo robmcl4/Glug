@@ -22,7 +22,7 @@ instance Ord WordRank where
 
 
 bestCandidates :: [WC.WordCount] -> (Integer, Integer)-> [WordRank]
-bestCandidates wcs range = sort . addIsCommon . addTimeGap . addSyllable . toWr $ dropWordsByFrequency wcs range
+bestCandidates wcs range = reverse . sort . addIsCommon . addTimeGap . addSyllable . toWr $ dropWordsByFrequency wcs range
   where toWr wcs_ = map (flip WordRank $ 0) wcs_
 
 
