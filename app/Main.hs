@@ -10,7 +10,7 @@ import Data.Char (isLatin1)
 import Data.List (sortOn)
 import System.IO (hFlush, stdout)
 import Text.Read (readEither)
-import Control.Monad (liftM, mzero, forM_)
+import Control.Monad (liftM, mzero, mplus, forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 
@@ -26,7 +26,8 @@ main = runMaybeT $ do
   ttls <- getCandidateTitles
   lnk <- chooseTitle ttls
   subs <- getSubs lnk
-  liftIO $ printBest subs
+  range <- getRange
+  liftIO $ printBest subs range
 
 
 getCandidateTitles :: MaybeIO [(T.Text, T.Text, Integer)]
@@ -67,9 +68,16 @@ getSubs s = do
       Right s -> return s
 
 
-printBest :: SRT.Subtitles -> IO ()
-printBest s = printWrs best
-  where best = (take 8) $ bestCandidates wcs (3, 7)
+getRange :: MaybeIO (Integer, Integer)
+getRange = do
+    n1 <- promptI "minimum occurances: "
+    n2 <- promptI "maximum occurances: "
+    return (n1, n2)
+
+
+printBest :: SRT.Subtitles -> (Integer, Integer) -> IO ()
+printBest s rng = printWrs best
+  where best = (take 8) $ bestCandidates wcs rng
         wcs = countWords s
         printWrs xs = forM_ xs printWr
         printWr = putStrLn . wrtos
@@ -86,6 +94,14 @@ printBest s = printWrs best
 
 
 -- ---------------------------- Utilities ----------------------------------- --
+
+promptI :: String -> MaybeIO Integer
+promptI s = do
+    got <- prompt s
+    case readEither got :: Either String Integer of
+        Left _ -> putStrLn' "Could not understand input" `mplus` promptI s
+        Right i -> return i
+
 
 prompt :: String -> MaybeIO String
 prompt s = MaybeT $ putStr s >> hFlush stdout >> liftM (Just) getLine
