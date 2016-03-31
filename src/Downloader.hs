@@ -38,7 +38,7 @@ getSubtitles s = runExceptT $ do
     cands <- candidateSubtitles s
     getSub cands
   where getSub [] = throwError "No subtitles found"
-        getSub (x:xs) = (subAt $ T.unpack x) `mplus` (getSub xs)
+        getSub (x:xs) = (subAt . T.unpack $ x) ||> getSub xs
         subAt subpath = do
             soup <- getSoup $ subscenebase ++ subpath
             downLink <- liftEither $ getDownloadLink soup
@@ -138,6 +138,11 @@ getTitles (_:xs) = getTitles xs
 
 
 -- -------------------------------- Utilities ------------------------------- --
+
+-- \ If first operation errors, uses second operation. Similar to `mplus`
+(||>) :: Monad m => ExceptT a m b -> ExceptT a m b -> ExceptT a m b
+x ||> y = x `catchError` (\_ -> y)
+
 
 eitherShow :: Show a => Either a b -> Either String b
 eitherShow (Left x) = Left $ show x
