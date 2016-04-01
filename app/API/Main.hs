@@ -10,8 +10,11 @@ import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as Enc
 
+import Control.Monad (liftM)
+import Control.Applicative ((<|>))
 import Data.Aeson (encode, ToJSON)
 import Data.List (find)
+import Data.Maybe (fromMaybe)
 import Data.Time.Clock
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import GHC.Generics
@@ -32,6 +35,7 @@ main = runSettings settings app
 app :: Application
 app req respond = case pathInfo req of
                     ("titles":_:[]) -> serveTitles req >>= respond
+                    ("title":_:[])  -> serveSubs req >>= respond
                     _ -> respond show404
 
 
@@ -69,6 +73,26 @@ serveTitles req = do
              _            -> return show404
 
 
+serveSubs :: Request -> IO Response
+serveSubs req = do
+    if requestMethod req /= methodGet
+    then return show404
+    else case pathInfo req of
+            (_:url:[]) -> do
+                if not . isSubLink $ url
+                then return show404
+                else do
+                  best <- getBestWords (T.unpack url) rng
+                  case best of
+                    Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
+                    Right x -> return . responseLBS status200 hdrJson . encode $ x
+            _          -> return show404
+  where hi = fromMaybe 6 $ queryParam req "min" >>= maybeI >>= liftM (min 13)
+        lo = fromMaybe 3 $ queryParam req "max" >>= maybeI >>= liftM (max 1)
+        rng = (lo, hi)
+        maybeI b = eToM (Enc.decodeUtf8' (B.toStrict b)) >>= eToM . readEither . T.unpack
+
+
 show404 :: Response
 show404 = responseLBS status404 hdrJson (errMsg "404 not found")
 
@@ -78,6 +102,11 @@ show404 = responseLBS status404 hdrJson (errMsg "404 not found")
 data ErrorMessage = ErrorMessage { message :: T.Text }
                                  deriving (Show, Eq, Generic)
 instance ToJSON ErrorMessage
+
+
+eToM :: Either a b -> Maybe b
+eToM (Left _)  = Nothing
+eToM (Right a) = Just a
 
 
 errMsg :: T.Text -> B.ByteString
