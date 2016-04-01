@@ -51,7 +51,7 @@ logReq req _ _ = t >>= (\t' -> putStrLn $ t' ++ " :: " ++ method ++ " " ++ path 
           ua = case find (\(k, _) -> k == hUserAgent) $ requestHeaders req of
                  Just (_, x) -> T.unpack . Enc.decodeUtf8 $ x
                  Nothing     -> ""
-          t = getCurrentTime >>= return . formatTime defaultTimeLocale "%F %X %Z"
+          t = getCurrentTime >>= return . formatTime defaultTimeLocale "%FT%X"
 
 
 -- ---------------------------- Request Handlers ---------------------------- --
