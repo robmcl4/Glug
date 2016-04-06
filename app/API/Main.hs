@@ -114,7 +114,8 @@ errMsg = encode . ErrorMessage
 
 
 hdrJson :: [Header]
-hdrJson = [(hContentType, "application/json")]
+hdrJson = [(hContentType, "application/json")
+          ,(("Access-Control-Allow-Origin", "*"))]
 
 -- | gets the given query parameter from the request's query string
 queryParam :: Request -> B.ByteString -> Maybe B.ByteString
