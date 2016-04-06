@@ -19,7 +19,7 @@ import Control.Monad (liftM)
 import Data.Aeson
 import GHC.Generics
 
-import qualified Downloader as D
+import qualified SubsceneDownloader as SD
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -42,7 +42,7 @@ instance ToJSON TitleDetails
 
 getTitles :: String -> IO (Either String [TitleLink])
 getTitles s = do
-    ettls <- D.candidateTitles s
+    ettls <- SD.candidateTitles s
     case ettls of
       Right ttls -> return . Right . map (\(a, b, c) -> TitleLink a b c) $ ttls
       Left x     -> return . Left $ x
@@ -50,7 +50,7 @@ getTitles s = do
 
 getBestWords :: String -> (Integer, Integer) -> IO (Either String [RankedWord])
 getBestWords url rng = do
-    esubs <- D.getSubtitles url
+    esubs <- SD.getSubtitles url
     let wrs = esubs >>= Right . WC.countWords >>= Right . (flip WH.bestCandidates) rng
     return $ wrs >>= Right . map toRW . take 25
   where toRW wr = RankedWord (T.fromStrict . WC.text . WH.wordcount $ wr)
@@ -58,7 +58,7 @@ getBestWords url rng = do
 
 
 getTitleDetails :: String -> IO (Either String TitleDetails)
-getTitleDetails = (liftM . liftM $ TitleDetails) . D.getImdbId
+getTitleDetails = (liftM . liftM $ TitleDetails) . SD.getImdbId
 
 
 isSubLink :: TS.Text -> Bool

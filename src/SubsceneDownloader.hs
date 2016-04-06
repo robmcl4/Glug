@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Downloader (
+module SubsceneDownloader (
   candidateTitles
 , getSubtitles
 , getImdbId

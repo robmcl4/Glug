@@ -14,7 +14,7 @@ import Control.Monad (liftM, mzero, mplus, forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 
-import Downloader
+import SubsceneDownloader
 import WordCounter
 import WordHeuristics
 
