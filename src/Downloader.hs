@@ -3,6 +3,7 @@
 module Downloader (
   candidateTitles
 , getSubtitles
+, getImdbId
 )
 where
 
@@ -46,12 +47,6 @@ getSubtitles s = runExceptT $ do
             liftEither $ parseSrtFromZip subs
 
 
-candidateSubtitles :: String -> ExceptT String IO [T.Text]
-candidateSubtitles s = do
-    soup <- getSoup $ subscenebase ++ s
-    liftEither $ getSubLinks soup
-
-
 candidateTitles :: String -> IO (Either String [(T.Text, T.Text, Integer)])
 candidateTitles s = runExceptT $ do
     soup <- getSoup $ searchurl ++ (quote_plus s)
@@ -59,6 +54,19 @@ candidateTitles s = runExceptT $ do
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles
   where dedup = map (head) . group . sort
         editDist = ED.levenshteinDistance ED.defaultEditCosts s
+
+
+getImdbId :: String -> IO (Either String T.Text)
+getImdbId s = runExceptT $ do
+    soup <- getSoup $ subscenebase ++ s
+    liftEither $ getImdbUrl soup >>= extractId
+  where extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/" t) "did not find valid imdb id"
+
+
+candidateSubtitles :: String -> ExceptT String IO [T.Text]
+candidateSubtitles s = do
+    soup <- getSoup $ subscenebase ++ s
+    liftEither $ getSubLinks soup
 
 
 getSoup :: String -> ExceptT String IO ([TS.Tag T.Text])
@@ -118,7 +126,6 @@ getTitles ((TS.TagOpen name attrs): xs)
         (i, rest') <- findCount rest
         next <- getTitles rest'
         Right $ (href, title, i) : next
-    | otherwise = getTitles xs
   where findHrefTitle [] = Left "No title found"
         findHrefTitle ((TS.TagOpen name' attrs'):
                        (TS.TagText title): ts)
@@ -135,6 +142,13 @@ getTitles ((TS.TagOpen name attrs): xs)
           where txt' = takeWhile (/= ' ') . T.unpack $ txt
         findCount (_:ts) = findCount ts
 getTitles (_:xs) = getTitles xs
+
+
+getImdbUrl :: [TS.Tag T.Text] -> Either String T.Text
+getImdbUrl [] = Left "No IMDb Id Found"
+getImdbUrl ((TS.TagOpen name attrs): _)
+    | name == "a" && ("class", "imdb") `elem` attrs = eitherAttr attrs "href"
+getImdbUrl (_:xs) = getImdbUrl xs
 
 
 -- -------------------------------- Utilities ------------------------------- --

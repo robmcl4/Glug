@@ -35,7 +35,8 @@ main = runSettings settings app
 app :: Application
 app req respond = case pathInfo req of
                     ("titles":_:[]) -> serveTitles req >>= respond
-                    ("title":_:[])  -> serveSubs req >>= respond
+                    ("words":_:[])  -> serveSubs req >>= respond
+                    ("title":_:[]) -> serveTitleDetails req >>= respond
                     _ -> respond show404
 
 
@@ -93,6 +94,22 @@ serveSubs req = do
         maybeI b = eToM (Enc.decodeUtf8' (B.toStrict b)) >>= eToM . readEither . T.unpack
 
 
+serveTitleDetails :: Request -> IO Response
+serveTitleDetails req = do
+    if requestMethod req /= methodGet
+    then return show404
+    else case pathInfo req of
+          (_:url:[]) -> do
+              if not . isSubLink $ url
+                then return show404
+                else do
+                  id_ <- getTitleDetails . T.unpack $ url
+                  case id_ of
+                    Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
+                    Right x -> return . responseLBS status200 hdrJson . encode $ x
+          _          -> return show404
+
+
 show404 :: Response
 show404 = responseLBS status404 hdrJson (errMsg "404 not found")
 
@@ -116,6 +133,7 @@ errMsg = encode . ErrorMessage
 hdrJson :: [Header]
 hdrJson = [(hContentType, "application/json")
           ,(("Access-Control-Allow-Origin", "*"))]
+
 
 -- | gets the given query parameter from the request's query string
 queryParam :: Request -> B.ByteString -> Maybe B.ByteString
