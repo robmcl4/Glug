@@ -9,12 +9,12 @@ where
 
 
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString as BST
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
-import qualified Network.URI as URI
-import qualified Network.HTTP as HTTP
 import qualified Network.HTTP.Base as HTB
-import qualified Network.HTTP.Headers as HTH
+import qualified Network.HTTP.Client as HTC
+import qualified Network.HTTP.Conduit as C
 import qualified Text.EditDistance as ED
 import qualified Text.HTML.TagSoup as TS
 import qualified Text.Subtitles.SRT as SRT
@@ -28,7 +28,7 @@ import SrtExtract (parseSrtFromZip)
 
 searchurl :: String
 subscenebase :: String
-useragent :: String
+useragent :: BST.ByteString
 searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
 useragent = "haskell/glug"
@@ -77,18 +77,14 @@ getSoup s = do
 
 
 makeGet :: String -> ExceptT String IO BSL.ByteString
-makeGet url = liftEither uri >>= makeGetReq . req
-    where uri = fromMaybe (URI.parseURI url) "Could not parse URI"
-          req u = HTH.replaceHeader HTH.HdrUserAgent useragent $ HTB.mkRequest HTB.GET u
+makeGet url = do
+    initReq <- C.parseUrl url
+    mgr <- manager
+    let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
+    (liftM C.responseBody) $ C.httpLbs req mgr
 
-
-makeGetReq :: HTB.Request BSL.ByteString -> ExceptT String IO BSL.ByteString
-makeGetReq r = do
-    resp <- (withExceptT show) . ExceptT $ HTTP.simpleHTTP r
-    case HTB.rspCode resp of
-      (2, _, _) -> return $ HTB.rspBody resp
-      (3, _, _) -> (liftEither $ findHeader resp HTH.HdrLocation) >>= makeGet
-      _         -> throwError "bad status code"
+manager :: MonadIO m => m C.Manager
+manager = liftIO $ C.newManager HTC.defaultManagerSettings
 
 -- ----------------------------- Soup Handling ------------------------------ --
 
@@ -173,10 +169,6 @@ eitherAttr ((k, v):xs) s
 
 liftEither :: Either a b -> ExceptT a IO b
 liftEither = ExceptT . return
-
-
-findHeader :: HTH.HasHeaders a => a -> HTH.HeaderName -> Either String String
-findHeader a h = fromMaybe (HTH.findHeader h a) ("Could not find header " ++ (show h))
 
 
 fromMaybe :: Maybe b -> String -> Either String b
