@@ -14,12 +14,14 @@ import qualified Data.Text.Lazy as T
 import qualified Data.Text as TS
 import qualified WordCounter as WC
 import qualified WordHeuristics as WH
+import qualified System.Environment as ENV
 
 import Control.Monad (liftM)
 import Data.Aeson
 import GHC.Generics
 
 import qualified SubsceneDownloader as SD
+import qualified TMDbDownloader as TD
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -33,11 +35,6 @@ data RankedWord = RankedWord { word :: T.Text
                              , occurances :: [Integer] }
                              deriving (Eq, Show, Generic)
 instance ToJSON RankedWord
-
-
-data TitleDetails = TitleDetails { imdbId :: T.Text }
-                                 deriving (Eq, Show, Generic)
-instance ToJSON TitleDetails
 
 
 getTitles :: String -> IO (Either String [TitleLink])
@@ -57,9 +54,21 @@ getBestWords url rng = do
                              (map (round . toRational) . WC.occurances . WH.wordcount $ wr)
 
 
-getTitleDetails :: String -> IO (Either String TitleDetails)
-getTitleDetails = (liftM . liftM $ TitleDetails) . SD.getImdbId
+getTitleDetails :: String -> IO (Either String TD.MovieDetails)
+getTitleDetails s = do
+    imdbid <- SD.getImdbId s
+    case imdbid of
+      Right i -> do
+          key <- getTMDbKey
+          case key of
+            Nothing -> return . Left $ "The Movie Database env variable not set"
+            Just k  -> TD.getDetailsOfMovie (T.unpack i) k
+      Left s -> return . Left $ s
 
 
 isSubLink :: TS.Text -> Bool
 isSubLink t =    "/subtitles/" `TS.isPrefixOf` t
+
+
+getTMDbKey :: IO (Maybe TD.ApiKey)
+getTMDbKey = ENV.lookupEnv "TMDB_KEY"

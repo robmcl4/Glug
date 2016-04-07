@@ -59,8 +59,9 @@ candidateTitles s = runExceptT $ do
 getImdbId :: String -> IO (Either String T.Text)
 getImdbId s = runExceptT $ do
     soup <- getSoup $ subscenebase ++ s
-    liftEither $ getImdbUrl soup >>= extractId
-  where extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/" t) "did not find valid imdb id"
+    liftEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
+  where extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
+        pad = Right . T.justifyRight 7 '0'
 
 
 candidateSubtitles :: String -> ExceptT String IO [T.Text]
