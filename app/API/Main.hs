@@ -97,17 +97,17 @@ serveSubs req = do
 serveTitleDetails :: Request -> IO Response
 serveTitleDetails req = do
     if requestMethod req /= methodGet
-    then return show404
+    then (putStrLn "what") >> return show404
     else case pathInfo req of
           (_:url:[]) -> do
-              if not . isSubLink $ url
-                then return show404
+              if not . isImdbId $ url
+                then (putStrLn "other thing") >> return show404
                 else do
                   id_ <- getTitleDetails . T.unpack $ url
                   case id_ of
                     Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                     Right x -> return . responseLBS status200 hdrJson . encode $ x
-          _          -> return show404
+          _          -> (putStrLn "uhh") >> return show404
 
 
 show404 :: Response

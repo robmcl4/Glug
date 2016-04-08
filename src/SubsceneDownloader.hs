@@ -3,7 +3,7 @@
 module SubsceneDownloader (
   candidateTitles
 , getSubtitles
-, getImdbId
+, MovieSubtitles (..)
 )
 where
 
@@ -34,10 +34,18 @@ subscenebase = "http://subscene.com"
 useragent = "haskell/glug"
 
 
-getSubtitles :: String -> IO (Either String SRT.Subtitles)
+data MovieSubtitles = MovieSubtitles { imdbid :: T.Text
+                                     , subtitles :: SRT.Subtitles }
+                                     deriving (Eq, Show)
+
+
+getSubtitles :: String -> IO (Either String MovieSubtitles)
 getSubtitles s = runExceptT $ do
-    cands <- candidateSubtitles s
-    getSub cands
+    soup <- getSoup $ subscenebase ++ s
+    cands <- liftEither $ getSubLinks soup
+    id_ <- liftEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
+    subs <- getSub cands
+    return $ MovieSubtitles { imdbid = id_, subtitles = subs }
   where getSub [] = throwError "No subtitles found"
         getSub (x:xs) = (subAt . T.unpack $ x) ||> getSub xs
         subAt subpath = do
@@ -45,6 +53,8 @@ getSubtitles s = runExceptT $ do
             downLink <- liftEither $ getDownloadLink soup
             subs <- makeGet (subscenebase ++ (T.unpack downLink))
             liftEither $ parseSrtFromZip subs
+        extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
+        pad = Right . T.justifyRight 7 '0'
 
 
 candidateTitles :: String -> IO (Either String [(T.Text, T.Text, Integer)])
@@ -54,20 +64,6 @@ candidateTitles s = runExceptT $ do
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles
   where dedup = map (head) . group . sort
         editDist = ED.levenshteinDistance ED.defaultEditCosts s
-
-
-getImdbId :: String -> IO (Either String T.Text)
-getImdbId s = runExceptT $ do
-    soup <- getSoup $ subscenebase ++ s
-    liftEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
-  where extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
-        pad = Right . T.justifyRight 7 '0'
-
-
-candidateSubtitles :: String -> ExceptT String IO [T.Text]
-candidateSubtitles s = do
-    soup <- getSoup $ subscenebase ++ s
-    liftEither $ getSubLinks soup
 
 
 getSoup :: String -> ExceptT String IO ([TS.Tag T.Text])

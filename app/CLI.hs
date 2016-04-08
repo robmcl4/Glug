@@ -63,7 +63,7 @@ chooseTitle bs = do
 getSubs :: T.Text -> MaybeIO SRT.Subtitles
 getSubs s = do
     subs <- liftIO $ getSubtitles $ T.unpack s
-    case subs of
+    case liftM (subtitles) subs of
       Left s -> putStrLn' $ "Could not find .srt: " ++ s
       Right s -> return s
 

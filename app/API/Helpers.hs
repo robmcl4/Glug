@@ -7,6 +7,7 @@ module API.Helpers (
 , getBestWords
 , getTitleDetails
 , isSubLink
+, isImdbId
 ) where
 
 import qualified Data.ByteString.Lazy as B
@@ -18,6 +19,7 @@ import qualified System.Environment as ENV
 
 import Control.Monad (liftM)
 import Data.Aeson
+import Data.Char (isDigit)
 import GHC.Generics
 
 import qualified SubsceneDownloader as SD
@@ -29,6 +31,13 @@ data TitleLink = TitleLink { href :: T.Text
                            , subs  :: Integer }
                            deriving (Eq, Show, Generic)
 instance ToJSON TitleLink
+
+
+data MovieSummary = MovieSummary { imdbid :: T.Text
+                                 , ranked_words :: [RankedWord]
+                                 , runtime :: Integer }
+                                 deriving (Eq, Show, Generic)
+instance ToJSON MovieSummary
 
 
 data RankedWord = RankedWord { word :: T.Text
@@ -45,29 +54,35 @@ getTitles s = do
       Left x     -> return . Left $ x
 
 
-getBestWords :: String -> (Integer, Integer) -> IO (Either String [RankedWord])
+getBestWords :: String -> (Integer, Integer) -> IO (Either String MovieSummary)
 getBestWords url rng = do
-    esubs <- SD.getSubtitles url
-    let wrs = esubs >>= Right . WC.countWords >>= Right . (flip WH.bestCandidates) rng
-    return $ wrs >>= Right . map toRW . take 25
+    mov <- SD.getSubtitles url
+    return $ do
+        mov' <- mov
+        let wcs = WC.countWords . SD.subtitles $ mov'
+        let best = (map toRW . take 25 . (flip WH.bestCandidates) rng) $ wcs
+        let runtime = round . toRational . maximum . concat . map (WC.occurances) $ wcs
+        return MovieSummary { imdbid = SD.imdbid mov'
+                            , ranked_words = best
+                            , runtime = runtime }
   where toRW wr = RankedWord (T.fromStrict . WC.text . WH.wordcount $ wr)
                              (map (round . toRational) . WC.occurances . WH.wordcount $ wr)
 
 
 getTitleDetails :: String -> IO (Either String TD.MovieDetails)
-getTitleDetails s = do
-    imdbid <- SD.getImdbId s
-    case imdbid of
-      Right i -> do
-          key <- getTMDbKey
-          case key of
-            Nothing -> return . Left $ "The Movie Database env variable not set"
-            Just k  -> TD.getDetailsOfMovie (T.unpack i) k
-      Left s -> return . Left $ s
+getTitleDetails i = do
+    key <- getTMDbKey
+    case key of
+      Nothing -> return . Left $ "The Movie Database env variable not set"
+      Just k  -> TD.getDetailsOfMovie i k
 
 
 isSubLink :: TS.Text -> Bool
-isSubLink t =    "/subtitles/" `TS.isPrefixOf` t
+isSubLink t = "/subtitles/" `TS.isPrefixOf` t
+
+
+isImdbId :: TS.Text -> Bool
+isImdbId t = "tt" `TS.isPrefixOf` t && TS.all isDigit (TS.drop 2 t)
 
 
 getTMDbKey :: IO (Maybe TD.ApiKey)
