@@ -12,6 +12,7 @@ import qualified Text.Subtitles.SRT as SRT
 
 import Data.List (find)
 import Data.Attoparsec.Text (parseOnly)
+import Control.Applicative ((<|>))
 import Control.Exception (try, evaluate)
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
@@ -42,8 +43,10 @@ getSrtBS bs = do
 
 getEntry :: Z.Archive -> Either String Z.Entry
 getEntry arch = do
-    fp <- fromMaybe "could not find srt" $ find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
-    fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fp arch)
+    fname <- fromMaybe "could not find srt" $ fp <|> fp'
+    fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fname arch)
+  where fp = find (\s -> endsIn s "eng.srt") (Z.filesInArchive arch)
+        fp' = find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
 
 
 endsIn :: String -> String -> Bool

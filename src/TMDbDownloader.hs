@@ -26,7 +26,8 @@ type IMDbId = String
 type ApiKey = String
 
 data MovieDetails = MovieDetails { runtime :: Integer
-                                 , poster :: T.Text }
+                                 , poster :: T.Text
+                                 , overview :: T.Text }
                                  deriving (Eq, Show, Generic)
 instance ToJSON MovieDetails
 
@@ -46,7 +47,8 @@ getDetailsOfMovie i k = runExceptT $ do
     obj' <- dec' bsl'
     post_path <- lookupPosterPath obj'
     mov_len <- lookupMovieLength obj'
-    return MovieDetails { runtime = mov_len, poster = post_path }
+    ovv <- lookupOverview obj'
+    return MovieDetails { runtime = mov_len, poster = post_path, overview = ovv }
   where dec' bs = case (decode bs :: Maybe Value) of
                          Just (Object o) -> return o
                          _                -> throwError "No object found"
@@ -61,7 +63,6 @@ getDetailsOfMovie i k = runExceptT $ do
 
 makeGet :: String -> ExceptT String IO BSL.ByteString
 makeGet url = do
-    liftIO $ putStrLn ("getting url " ++ url)
     initReq <- C.parseUrl url
     mgr <- manager
     let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
@@ -88,6 +89,12 @@ lookupMovieLength :: Object -> ExceptT String IO Integer
 lookupMovieLength o = case HM.lookup "runtime" o of
                         Just (Number s) -> return . ((*) 60) . round . toRational $ s
                         _               -> throwError "Did not find id"
+
+
+lookupOverview :: Object -> ExceptT String IO T.Text
+lookupOverview o = case HM.lookup "overview" o of
+                       Just (String t) -> return t
+                       _               -> throwError "Did not find overview"
 
 
 lookupArray :: T.Text -> Object -> ExceptT String IO Array
