@@ -1,4 +1,4 @@
-module WordHeuristics (
+module Glug.WordHeuristics (
   bestCandidates
 , WordRank (..)
 )
@@ -6,7 +6,7 @@ where
 
 
 import qualified Data.Text as T
-import qualified WordCounter as WC
+import qualified Glug.WordCounter as WC
 import qualified Glug.WordTrie as WT (commonWords, containsStr)
 import Data.Int (Int32)
 import Data.List (sort)

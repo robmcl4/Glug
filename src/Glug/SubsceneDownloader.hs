@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module SubsceneDownloader (
+module Glug.SubsceneDownloader (
   candidateTitles
 , getSubtitles
 , MovieSubtitles (..)
@@ -24,7 +24,7 @@ import Data.List (group, sort, sortOn)
 import Text.Read (readEither)
 import Control.Monad.Except
 
-import SrtExtract (parseSrtFromZip)
+import Glug.SrtExtract (parseSrtFromZip)
 
 searchurl :: String
 subscenebase :: String

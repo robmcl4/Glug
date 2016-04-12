@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 
-module TMDbDownloader (
+module Glug.TMDbDownloader (
   IMDbId
 , ApiKey
 , MovieDetails

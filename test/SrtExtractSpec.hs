@@ -3,7 +3,7 @@ module SrtExtractSpec (main, spec) where
 import qualified Data.ByteString.Base64.Lazy as B64
 import qualified Data.ByteString.Lazy.Char8 as BSC
 import Test.Hspec
-import SrtExtract
+import Glug.SrtExtract
 
 main :: IO ()
 main = hspec spec

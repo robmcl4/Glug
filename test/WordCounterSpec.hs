@@ -7,7 +7,7 @@ import qualified Data.Time.Clock as C
 import Data.List (sortOn)
 import Data.Int (Int32)
 import Test.Hspec
-import WordCounter
+import Glug.WordCounter
 
 main :: IO ()
 main = hspec spec

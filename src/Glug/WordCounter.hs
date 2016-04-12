@@ -1,4 +1,4 @@
-module WordCounter (
+module Glug.WordCounter (
   countWords
 , WordCount (..)
 )

@@ -2,7 +2,7 @@ module WordHeuristicsSpec (main, spec) where
 
 
 import Test.Hspec
-import WordHeuristics
+import Glug.WordHeuristics
 
 
 main :: IO ()

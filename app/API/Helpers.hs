@@ -13,8 +13,8 @@ module API.Helpers (
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TS
-import qualified WordCounter as WC
-import qualified WordHeuristics as WH
+import qualified Glug.WordCounter as WC
+import qualified Glug.WordHeuristics as WH
 import qualified System.Environment as ENV
 
 import Control.Monad (liftM)
@@ -22,8 +22,8 @@ import Data.Aeson
 import Data.Char (isDigit)
 import GHC.Generics
 
-import qualified SubsceneDownloader as SD
-import qualified TMDbDownloader as TD
+import qualified Glug.SubsceneDownloader as SD
+import qualified Glug.TMDbDownloader as TD
 
 
 data TitleLink = TitleLink { href :: T.Text

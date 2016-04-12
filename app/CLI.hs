@@ -14,9 +14,9 @@ import Control.Monad (liftM, mzero, mplus, forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 
-import SubsceneDownloader
-import WordCounter
-import WordHeuristics
+import Glug.SubsceneDownloader
+import Glug.WordCounter
+import Glug.WordHeuristics
 
 type MaybeIO = MaybeT IO
 
