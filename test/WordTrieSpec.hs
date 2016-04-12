@@ -1,7 +1,7 @@
 module WordTrieSpec (main, spec) where
 
 import Test.Hspec
-import WordTrie
+import Glug.WordTrie
 
 main :: IO ()
 main = hspec spec

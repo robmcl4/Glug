@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     SrtExtract
                      , WordCounter
-                     , WordTrie
+                     , Glug.WordTrie
                      , WordHeuristics
                      , SubsceneDownloader
                      , TMDbDownloader

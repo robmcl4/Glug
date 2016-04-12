@@ -18,7 +18,7 @@ spec = do
       (length subs) `shouldBe` 1
 
     it "returns Left when no SRT exists" $ do
-      (parseSrtFromZip zipWithNoSubs) `shouldBe` (Left "could not find srt")
+      (parseSrtFromZip zipWithNoSubs) `shouldBe` (Left "[getting entry] could not find srt")
 
 
 zipWithNoSubs = decodeB64 "\

@@ -24,7 +24,7 @@ parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs
 bsToSubs :: B.ByteString -> Either String SRT.Subtitles
 bsToSubs bs = do
     t <- tag "decoding" . eitherShow . decode' $ bs
-    tag "using srt parser" . parseOnly SRT.parseSRT . T.toStrict . T.strip $ t
+    tag "using srt parser" . parseOnly SRT.parseSRT . T.toStrict $ t
   where bom = B.unpack $ B.take 3 bs
         decode | (take 2 bom) == [0xFE, 0xFF] = Enc.decodeUtf16BE . B.drop 2
                | (take 2 bom) == [0xFF, 0xFE] = Enc.decodeUtf16LE . B.drop 2
