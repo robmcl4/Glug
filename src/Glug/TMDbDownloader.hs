@@ -10,7 +10,6 @@ module Glug.TMDbDownloader (
 ) where
 
 
-import qualified Data.ByteString as BSS
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -20,6 +19,8 @@ import qualified Network.HTTP.Conduit as C
 import Control.Monad.Except
 import Data.Aeson
 import GHC.Generics
+
+import Glug.Constants (useragent)
 
 
 type IMDbId = String
@@ -32,8 +33,6 @@ data MovieDetails = MovieDetails { runtime :: Integer
 instance ToJSON MovieDetails
 
 
-useragent :: BSS.ByteString
-useragent = "haskell/glug"
 tmdb_base :: String
 tmdb_base = "https://api.themoviedb.org/3/"
 

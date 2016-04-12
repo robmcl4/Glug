@@ -9,7 +9,6 @@ where
 
 
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString as BST
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
 import qualified Network.HTTP.Base as HTB
@@ -24,14 +23,14 @@ import Data.List (group, sort, sortOn)
 import Text.Read (readEither)
 import Control.Monad.Except
 
+import Glug.Constants (useragent)
 import Glug.SrtExtract (parseSrtFromZip)
+
 
 searchurl :: String
 subscenebase :: String
-useragent :: BST.ByteString
 searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
-useragent = "haskell/glug"
 
 
 data MovieSubtitles = MovieSubtitles { imdbid :: T.Text
