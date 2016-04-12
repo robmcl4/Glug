@@ -3,7 +3,6 @@
 module Glug.SubsceneDownloader (
   candidateTitles
 , getSubtitles
-, MovieSubtitles (..)
 )
 where
 
@@ -16,7 +15,6 @@ import qualified Network.HTTP.Client as HTC
 import qualified Network.HTTP.Conduit as C
 import qualified Text.EditDistance as ED
 import qualified Text.HTML.TagSoup as TS
-import qualified Text.Subtitles.SRT as SRT
 
 import Data.Char (isSpace)
 import Data.List (group, sort, sortOn)
@@ -25,17 +23,13 @@ import Control.Monad.Except
 
 import Glug.Constants (useragent)
 import Glug.SrtExtract (parseSrtFromZip)
+import Glug.Types (MovieSubtitles (..))
 
 
 searchurl :: String
 subscenebase :: String
 searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
-
-
-data MovieSubtitles = MovieSubtitles { imdbid :: T.Text
-                                     , subtitles :: SRT.Subtitles }
-                                     deriving (Eq, Show)
 
 
 getSubtitles :: String -> IO (Either String MovieSubtitles)

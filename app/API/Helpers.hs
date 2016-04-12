@@ -10,20 +10,19 @@ module API.Helpers (
 , isImdbId
 ) where
 
-import qualified Data.ByteString.Lazy as B
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TS
 import qualified Glug.WordCounter as WC
 import qualified Glug.WordHeuristics as WH
 import qualified System.Environment as ENV
 
-import Control.Monad (liftM)
 import Data.Aeson
 import Data.Char (isDigit)
 import GHC.Generics
 
 import qualified Glug.SubsceneDownloader as SD
 import qualified Glug.TMDbDownloader as TD
+import qualified Glug.Types as GT (MovieSubtitles (..), MovieDetails (..))
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -50,7 +49,7 @@ getTitles :: String -> IO (Either String [TitleLink])
 getTitles s = do
     ettls <- SD.candidateTitles s
     case ettls of
-      Right ttls -> return . Right . map (\(a, b, c) -> TitleLink a b c) $ ttls
+      Right ttls -> return . Right . map (\(a, b, c) -> TitleLink { href = a, title = b, subs = c }) $ ttls
       Left x     -> return . Left $ x
 
 
@@ -59,17 +58,18 @@ getBestWords url rng = do
     mov <- SD.getSubtitles url
     return $ do
         mov' <- mov
-        let wcs = WC.countWords . SD.subtitles $ mov'
+        let wcs = WC.countWords . GT.subtitles $ mov'
         let best = (map toRW . take 25 . (flip WH.bestCandidates) rng) $ wcs
-        let runtime = round . toRational . maximum . concat . map (WC.occurances) $ wcs
-        return MovieSummary { imdbid = SD.imdbid mov'
+        let rt = round . toRational . maximum . concat . map (WC.occurances) $ wcs
+        return MovieSummary { imdbid = GT.imdbid mov'
                             , ranked_words = best
-                            , runtime = runtime }
-  where toRW wr = RankedWord (T.fromStrict . WC.text . WH.wordcount $ wr)
-                             (map (round . toRational) . WC.occurances . WH.wordcount $ wr)
+                            , runtime = rt }
+  where toRW wr = RankedWord { word = T.fromStrict . WC.text . WH.wordcount $ wr
+                             , occurances = map (round . toRational) . WC.occurances . WH.wordcount $ wr
+                             }
 
 
-getTitleDetails :: String -> IO (Either String TD.MovieDetails)
+getTitleDetails :: String -> IO (Either String GT.MovieDetails)
 getTitleDetails i = do
     key <- getTMDbKey
     case key of

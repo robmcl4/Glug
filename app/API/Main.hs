@@ -6,12 +6,10 @@ module API.Main (
 ) where
 
 import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as Enc
 
 import Control.Monad (liftM)
-import Control.Applicative ((<|>))
 import Data.Aeson (encode, ToJSON)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
@@ -127,7 +125,7 @@ eToM (Right a) = Just a
 
 
 errMsg :: T.Text -> B.ByteString
-errMsg = encode . ErrorMessage
+errMsg t = encode ErrorMessage { message = t }
 
 
 hdrJson :: [Header]

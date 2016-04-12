@@ -1,11 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 
 module Glug.TMDbDownloader (
   IMDbId
 , ApiKey
-, MovieDetails
 , getDetailsOfMovie
 ) where
 
@@ -18,19 +16,9 @@ import qualified Network.HTTP.Conduit as C
 
 import Control.Monad.Except
 import Data.Aeson
-import GHC.Generics
 
 import Glug.Constants (useragent)
-
-
-type IMDbId = String
-type ApiKey = String
-
-data MovieDetails = MovieDetails { runtime :: Integer
-                                 , poster :: T.Text
-                                 , overview :: T.Text }
-                                 deriving (Eq, Show, Generic)
-instance ToJSON MovieDetails
+import Glug.Types (MovieDetails (..), IMDbId, ApiKey)
 
 
 tmdb_base :: String

@@ -3,11 +3,9 @@ module CLI (
 ) where
 
 import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
 import qualified Data.Text as TS
 import qualified Text.Subtitles.SRT as SRT
 import Data.Char (isLatin1)
-import Data.List (sortOn)
 import System.IO (hFlush, stdout)
 import Text.Read (readEither)
 import Control.Monad (liftM, mzero, mplus, forM_)
@@ -17,6 +15,7 @@ import Control.Monad.Trans.Maybe
 import Glug.SubsceneDownloader
 import Glug.WordCounter
 import Glug.WordHeuristics
+import Glug.Types
 
 type MaybeIO = MaybeT IO
 
@@ -56,13 +55,13 @@ chooseTitle bs = do
     where bs' = take 5 bs
           rest = drop 5 bs
           printTitle (_, t, n) i = putStrLn $ "[" ++ show i ++ "] " ++ (T.unpack . sanitizeForPrint $ t) ++ " - " ++ show n
-          printTitles xs = forM_ (zip xs [1..]) (uncurry printTitle)
+          printTitles xs = forM_ (zip xs ([1..] :: [Integer])) (uncurry printTitle)
           getLnk (l, _, _) = l
 
 
 getSubs :: T.Text -> MaybeIO SRT.Subtitles
-getSubs s = do
-    subs <- liftIO $ getSubtitles $ T.unpack s
+getSubs slnk = do
+    subs <- liftIO $ getSubtitles $ T.unpack slnk
     case liftM (subtitles) subs of
       Left s -> putStrLn' $ "Could not find .srt: " ++ s
       Right s -> return s
