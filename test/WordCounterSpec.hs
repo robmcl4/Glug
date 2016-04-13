@@ -8,6 +8,8 @@ import Data.List (sortOn)
 import Data.Int (Int32)
 import Test.Hspec
 import Glug.WordCounter
+import Glug.Types (WordCount (..))
+
 
 main :: IO ()
 main = hspec spec
