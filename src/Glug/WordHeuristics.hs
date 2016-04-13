@@ -6,7 +6,7 @@ where
 
 
 import qualified Data.Text as T
-import qualified Glug.WordCounter as WC
+import qualified Glug.Types as WC (WordCount (..))
 import qualified Glug.WordTrie as WT (commonWords, containsStr)
 import Data.Int (Int32)
 import Data.List (sort)

@@ -2,9 +2,7 @@
 
 
 module Glug.TMDbDownloader (
-  IMDbId
-, ApiKey
-, getDetailsOfMovie
+  getDetailsOfMovie
 ) where
 
 

@@ -22,7 +22,7 @@ import GHC.Generics
 
 import qualified Glug.SubsceneDownloader as SD
 import qualified Glug.TMDbDownloader as TD
-import qualified Glug.Types as GT (MovieSubtitles (..), MovieDetails (..))
+import qualified Glug.Types as GT (MovieSubtitles (..), MovieDetails (..), WordCount (..), ApiKey)
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -60,12 +60,12 @@ getBestWords url rng = do
         mov' <- mov
         let wcs = WC.countWords . GT.subtitles $ mov'
         let best = (map toRW . take 25 . (flip WH.bestCandidates) rng) $ wcs
-        let rt = round . toRational . maximum . concat . map (WC.occurances) $ wcs
+        let rt = round . toRational . maximum . concat . map (GT.occurances) $ wcs
         return MovieSummary { imdbid = GT.imdbid mov'
                             , ranked_words = best
                             , runtime = rt }
-  where toRW wr = RankedWord { word = T.fromStrict . WC.text . WH.wordcount $ wr
-                             , occurances = map (round . toRational) . WC.occurances . WH.wordcount $ wr
+  where toRW wr = RankedWord { word = T.fromStrict . GT.text . WH.wordcount $ wr
+                             , occurances = map (round . toRational) . GT.occurances . WH.wordcount $ wr
                              }
 
 
@@ -85,5 +85,5 @@ isImdbId :: TS.Text -> Bool
 isImdbId t = "tt" `TS.isPrefixOf` t && TS.all isDigit (TS.drop 2 t)
 
 
-getTMDbKey :: IO (Maybe TD.ApiKey)
+getTMDbKey :: IO (Maybe GT.ApiKey)
 getTMDbKey = ENV.lookupEnv "TMDB_KEY"

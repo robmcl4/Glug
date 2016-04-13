@@ -1,6 +1,5 @@
 module Glug.WordCounter (
   countWords
-, WordCount (..)
 )
 where
 
@@ -8,14 +7,8 @@ import qualified Data.Text as T
 import qualified Text.Subtitles.SRT as SRT
 import qualified Data.Time.Clock as C
 import Data.Char (isLetter)
-import Data.Int (Int32)
 
-
-data WordCount = WordCount { text :: T.Text
-                           , freq :: Int32
-                           , occurances :: [C.DiffTime]
-                           } deriving (Show, Eq)
-
+import Glug.Types (WordCount (..))
 
 addTime :: WordCount -> C.DiffTime -> WordCount
 addTime wc t = wc { freq = freq', occurances = occurances' }
