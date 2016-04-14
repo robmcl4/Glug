@@ -8,6 +8,6 @@ module Glug (
 
 import Glug.Types
 import Glug.WordCounter
-import Glug.WordHeuristics (bestCandidates, WordRank (..))
+import Glug.WordHeuristics (bestCandidates)
 import Glug.SubsceneDownloader
 import Glug.TMDbDownloader

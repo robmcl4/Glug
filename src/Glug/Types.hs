@@ -6,6 +6,7 @@ module Glug.Types (
 , IMDbId
 , ApiKey
 , WordCount (..)
+, WordRank (..)
 ) where
 
 import qualified Text.Subtitles.SRT as SRT
@@ -40,3 +41,10 @@ data WordCount = WordCount { text :: T.Text
                            , freq :: Int32
                            , occurances :: [C.DiffTime]
                            } deriving (Show, Eq)
+
+
+data WordRank = WordRank { wordcount :: WordCount
+                        , heuristic :: Int32 }
+                        deriving (Show, Eq)
+instance Ord WordRank where
+  compare w1 w2 = compare (heuristic w1) (heuristic w2)

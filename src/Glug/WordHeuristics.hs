@@ -1,6 +1,5 @@
 module Glug.WordHeuristics (
   bestCandidates
-, WordRank (..)
 )
 where
 
@@ -11,14 +10,7 @@ import qualified Glug.WordTrie as WT (commonWords, containsStr)
 import Data.Int (Int32)
 import Data.List (sort)
 
-
-data WordRank = WordRank { wordcount :: WC.WordCount
-                         , heuristic :: Int32 }
-                         deriving (Show, Eq)
-
-
-instance Ord WordRank where
-  compare w1 w2 = compare (heuristic w1) (heuristic w2)
+import Glug.Types (WordRank (..))
 
 
 bestCandidates :: [WC.WordCount] -> (Integer, Integer)-> [WordRank]
