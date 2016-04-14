@@ -10,14 +10,18 @@ import Data.Char (isLetter)
 
 import Glug.Types (WordCount (..))
 
+
+-- | Collects the subtitles into individual words with some aggregate word
+--   details.
+countWords :: SRT.Subtitles  -- ^ The subtitles to analyze
+              -> [WordCount] -- ^ An aggregate summary of all words
+countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
+
+
 addTime :: WordCount -> C.DiffTime -> WordCount
 addTime wc t = wc { freq = freq', occurances = occurances' }
     where freq' = 1 + freq wc
           occurances' = t : (occurances wc)
-
-
-countWords :: SRT.Subtitles -> [WordCount]
-countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
 
 
 wordsInSubtitles :: SRT.Subtitles -> [(T.Text, C.DiffTime)]

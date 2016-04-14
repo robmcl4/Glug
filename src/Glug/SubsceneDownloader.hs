@@ -32,7 +32,10 @@ searchurl = "http://subscene.com/subtitles/title?q="
 subscenebase = "http://subscene.com"
 
 
-getSubtitles :: String -> IO (Either String MovieSubtitles)
+-- | Gets the subtitles from a movie
+getSubtitles :: String -- ^ The path to the subtitle listing on subscene
+                -> IO (Either String MovieSubtitles) -- ^ Either an error
+                                                     -- message or movie subtitles
 getSubtitles s = runExceptT $ do
     soup <- getSoup $ subscenebase ++ s
     cands <- liftEither $ getSubLinks soup
@@ -50,7 +53,12 @@ getSubtitles s = runExceptT $ do
         pad = Right . T.justifyRight 7 '0'
 
 
-candidateTitles :: String -> IO (Either String [(T.Text, T.Text, Integer)])
+-- | Gets candidate titles from a movie after searching by title
+candidateTitles :: String
+                   -- ^ The movie title being searched
+                   -> IO (Either String [(T.Text, T.Text, Integer)])
+                   -- ^ Either an error message or a list of
+                   --   (href, title, no. of subs)
 candidateTitles s = runExceptT $ do
     soup <- getSoup $ searchurl ++ (quote_plus s)
     titles <- liftEither $ getTitles soup

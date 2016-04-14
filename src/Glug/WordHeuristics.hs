@@ -13,7 +13,10 @@ import Data.List (sort)
 import Glug.Types (WordRank (..))
 
 
-bestCandidates :: [WC.WordCount] -> (Integer, Integer)-> [WordRank]
+-- | Gets the best candidates from a list of words, sorted best first
+bestCandidates :: [WC.WordCount] -- ^ The words to analyze
+                  -> (Integer, Integer) -- ^ The accepable range of occurances, (min, max)
+                  -> [WordRank] -- ^ The best candidate words
 bestCandidates wcs range = reverse . sort . addIsCommon . addTimeGap . addSyllable . toWr $ dropWordsByFrequency wcs range
   where toWr wcs_ = map (flip WordRank $ 0) wcs_
 

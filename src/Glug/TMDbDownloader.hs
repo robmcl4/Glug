@@ -23,7 +23,13 @@ tmdb_base :: String
 tmdb_base = "https://api.themoviedb.org/3/"
 
 
-getDetailsOfMovie :: IMDbId -> ApiKey -> IO (Either String MovieDetails)
+-- | Gets details about a movie by IMDb Id
+getDetailsOfMovie :: IMDbId
+                     -- ^ The IMDb ID
+                     -> ApiKey
+                     -- ^ The Api key for The Movie Database
+                     -> IO (Either String MovieDetails)
+                     -- ^ Either an error message or movie details
 getDetailsOfMovie i k = runExceptT $ do
     bsl <- makeGet $ tmdb_base ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
     obj <- dec' bsl
