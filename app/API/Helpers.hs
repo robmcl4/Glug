@@ -12,17 +12,13 @@ module API.Helpers (
 
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TS
-import qualified Glug.WordCounter as WC
-import qualified Glug.WordHeuristics as WH
 import qualified System.Environment as ENV
 
 import Data.Aeson
 import Data.Char (isDigit)
 import GHC.Generics
 
-import qualified Glug.SubsceneDownloader as SD
-import qualified Glug.TMDbDownloader as TD
-import qualified Glug.Types as GT (MovieSubtitles (..), MovieDetails (..), WordCount (..), ApiKey)
+import qualified Glug as G
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -47,7 +43,7 @@ instance ToJSON RankedWord
 
 getTitles :: String -> IO (Either String [TitleLink])
 getTitles s = do
-    ettls <- SD.candidateTitles s
+    ettls <- G.candidateTitles s
     case ettls of
       Right ttls -> return . Right . map (\(a, b, c) -> TitleLink { href = a, title = b, subs = c }) $ ttls
       Left x     -> return . Left $ x
@@ -55,26 +51,26 @@ getTitles s = do
 
 getBestWords :: String -> (Integer, Integer) -> IO (Either String MovieSummary)
 getBestWords url rng = do
-    mov <- SD.getSubtitles url
+    mov <- G.getSubtitles url
     return $ do
         mov' <- mov
-        let wcs = WC.countWords . GT.subtitles $ mov'
-        let best = (map toRW . take 25 . (flip WH.bestCandidates) rng) $ wcs
-        let rt = round . toRational . maximum . concat . map (GT.occurances) $ wcs
-        return MovieSummary { imdbid = GT.imdbid mov'
+        let wcs = G.countWords . G.subtitles $ mov'
+        let best = (map toRW . take 25 . (flip G.bestCandidates) rng) $ wcs
+        let rt = round . toRational . maximum . concat . map (G.occurances) $ wcs
+        return MovieSummary { imdbid = G.imdbid mov'
                             , ranked_words = best
                             , runtime = rt }
-  where toRW wr = RankedWord { word = T.fromStrict . GT.text . WH.wordcount $ wr
-                             , occurances = map (round . toRational) . GT.occurances . WH.wordcount $ wr
+  where toRW wr = RankedWord { word = T.fromStrict . G.text . G.wordcount $ wr
+                             , occurances = map (round . toRational) . G.occurances . G.wordcount $ wr
                              }
 
 
-getTitleDetails :: String -> IO (Either String GT.MovieDetails)
+getTitleDetails :: String -> IO (Either String G.MovieDetails)
 getTitleDetails i = do
     key <- getTMDbKey
     case key of
       Nothing -> return . Left $ "The Movie Database env variable not set"
-      Just k  -> TD.getDetailsOfMovie i k
+      Just k  -> G.getDetailsOfMovie i k
 
 
 isSubLink :: TS.Text -> Bool
@@ -85,5 +81,5 @@ isImdbId :: TS.Text -> Bool
 isImdbId t = "tt" `TS.isPrefixOf` t && TS.all isDigit (TS.drop 2 t)
 
 
-getTMDbKey :: IO (Maybe GT.ApiKey)
+getTMDbKey :: IO (Maybe G.ApiKey)
 getTMDbKey = ENV.lookupEnv "TMDB_KEY"

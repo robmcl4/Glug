@@ -12,10 +12,7 @@ import Control.Monad (liftM, mzero, mplus, forM_)
 import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Maybe
 
-import Glug.SubsceneDownloader
-import Glug.WordCounter
-import Glug.WordHeuristics
-import Glug.Types
+import Glug
 
 type MaybeIO = MaybeT IO
 
