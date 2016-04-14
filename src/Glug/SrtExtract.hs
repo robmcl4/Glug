@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module Glug.SrtExtract (
   parseSrtFromZip
 )
@@ -14,17 +16,18 @@ import Data.List (find)
 import Data.Attoparsec.Text (parseOnly)
 import Control.Applicative ((<|>))
 import Control.Exception (try, evaluate)
+import Control.Monad.Except (MonadError, catchError, throwError)
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
 
-parseSrtFromZip :: B.ByteString -> Either String SRT.Subtitles
+parseSrtFromZip :: MonadError String m => B.ByteString -> m SRT.Subtitles
 parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs
 
 
-bsToSubs :: B.ByteString -> Either String SRT.Subtitles
+bsToSubs :: MonadError String m => B.ByteString -> m SRT.Subtitles
 bsToSubs bs = do
-    t <- tag "decoding" . eitherShow . decode' $ bs
-    tag "using srt parser" . parseOnly SRT.parseSRT . T.toStrict $ t
+    t <- tag "decoding" . fromEither . eitherShow . decode' $ bs
+    tag "using srt parser" . fromEither . parseOnly SRT.parseSRT . T.toStrict $ t
   where bom = B.unpack $ B.take 3 bs
         decode | (take 2 bom) == [0xFE, 0xFF] = Enc.decodeUtf16BE . B.drop 2
                | (take 2 bom) == [0xFF, 0xFE] = Enc.decodeUtf16LE . B.drop 2
@@ -34,14 +37,14 @@ bsToSubs bs = do
         decode' = unsafeDupablePerformIO . try . evaluate . decode -- D:
 
 
-getSrtBS :: B.ByteString -> Either String B.ByteString
+getSrtBS :: MonadError String m => B.ByteString -> m B.ByteString
 getSrtBS bs = do
-    arch <- tag "converting to archive" $ Z.toArchiveOrFail bs
-    entry <- tag "getting entry" $ getEntry arch
+    arch <- fromEither . tag "converting to archive" $ Z.toArchiveOrFail bs
+    entry <- fromEither . tag "getting entry" $ getEntry arch
     return $ Z.fromEntry entry
 
 
-getEntry :: Z.Archive -> Either String Z.Entry
+getEntry :: MonadError String m => Z.Archive -> m Z.Entry
 getEntry arch = do
     fname <- fromMaybe "could not find srt" $ fp <|> fp'
     fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fname arch)
@@ -56,16 +59,20 @@ endsIn []  (_:_) = False
 endsIn (x:xs) (y:ys) = (x == y && endsIn xs ys) || endsIn xs (y:ys)
 
 
-fromMaybe :: String -> Maybe b -> Either String b
-fromMaybe s Nothing = Left s
-fromMaybe _ (Just x) = Right x
-
-
 eitherShow :: Show a => Either a b -> Either String b
 eitherShow (Left x) = Left (show x)
 eitherShow (Right x) = Right x
 
 
-tag :: String -> Either String a -> Either String a
-tag _ (Right x) = Right x
-tag t (Left s) = Left $ "[" ++ t ++ "] " ++ s
+tag :: MonadError String m => String -> m a -> m a
+tag s m = m `catchError` (\e -> throwError $ "[" ++ s ++ "] " ++ e)
+
+
+fromMaybe :: MonadError String m => String -> Maybe b -> m b
+fromMaybe s Nothing = throwError s
+fromMaybe _ (Just x) = return x
+
+
+fromEither :: MonadError String m => Either String a -> m a
+fromEither (Left e) = throwError e
+fromEither (Right x) = return x

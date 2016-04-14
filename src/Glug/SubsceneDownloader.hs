@@ -45,7 +45,7 @@ getSubtitles s = runExceptT $ do
             soup <- getSoup $ subscenebase ++ subpath
             downLink <- liftEither $ getDownloadLink soup
             subs <- makeGet (subscenebase ++ (T.unpack downLink))
-            liftEither $ parseSrtFromZip subs
+            parseSrtFromZip subs
         extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
         pad = Right . T.justifyRight 7 '0'
 
