@@ -19,6 +19,7 @@ import Data.Char (isDigit)
 import GHC.Generics
 
 import qualified Glug as G
+import qualified Glug.Monad as GM
 
 
 data TitleLink = TitleLink { href :: T.Text
@@ -70,7 +71,7 @@ getTitleDetails i = do
     key <- getTMDbKey
     case key of
       Nothing -> return . Left $ "The Movie Database env variable not set"
-      Just k  -> G.getDetailsOfMovie i k
+      Just k  -> G.getDetailsOfMovie i k GM.realTlsGetM
 
 
 isSubLink :: TS.Text -> Bool
