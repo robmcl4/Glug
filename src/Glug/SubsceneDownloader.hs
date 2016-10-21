@@ -7,7 +7,6 @@ module Glug.SubsceneDownloader (
 where
 
 
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
 import qualified Text.EditDistance as ED
@@ -19,7 +18,7 @@ import Data.List (group, sort, sortOn)
 import Network.HTTP.Base (urlEncode)
 import Text.Read (readEither)
 
-import Glug.Monad (execMonadGlugIO, realTlsGetM)
+import Glug.Monad (MonadGlugIO (..), execMonadGlugIO, realTlsGetM, hoistEither)
 import Glug.SrtExtract (parseSrtFromZip)
 import Glug.Types (MovieSubtitles (..))
 
@@ -34,18 +33,18 @@ subscenebase = "https://subscene.com"
 getSubtitles :: String -- ^ The path to the subtitle listing on subscene
                 -> IO (Either String MovieSubtitles) -- ^ Either an error
                                                      -- message or movie subtitles
-getSubtitles s = runExceptT $ do
+getSubtitles s = liftM (fst) . execMonadGlugIO $ do
     soup <- getSoup $ subscenebase ++ s
-    cands <- liftEither $ getSubLinks soup
-    id_ <- liftEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
+    cands <- hoistEither $ getSubLinks soup
+    id_ <- hoistEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
     subs <- getSub cands
     return $ MovieSubtitles { imdbid = id_, subtitles = subs }
   where getSub [] = throwError "No subtitles found"
-        getSub (x:xs) = (subAt . T.unpack $ x) ||> getSub xs
+        getSub (x:xs) = (subAt . T.unpack $ x) `catchError` (\_ -> getSub xs)
         subAt subpath = do
             soup <- getSoup $ subscenebase ++ subpath
-            downLink <- liftEither $ getDownloadLink soup
-            subs <- makeGet (subscenebase ++ (T.unpack downLink))
+            downLink <- hoistEither $ getDownloadLink soup
+            subs <- realTlsGetM (subscenebase ++ (T.unpack downLink))
             parseSrtFromZip subs
         extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
         pad = Right . T.justifyRight 7 '0'
@@ -57,24 +56,19 @@ candidateTitles :: String
                    -> IO (Either String [(T.Text, T.Text, Integer)])
                    -- ^ Either an error message or a list of
                    --   (href, title, no. of subs)
-candidateTitles s = runExceptT $ do
+candidateTitles s = liftM (fst) . execMonadGlugIO $ do
     soup <- getSoup $ searchurl ++ (quote_plus s)
-    titles <- liftEither $ getTitles soup
+    titles <- hoistEither $ getTitles soup
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles
   where dedup = map (head) . group . sort
         editDist = ED.levenshteinDistance ED.defaultEditCosts s
 
 
-getSoup :: String -> ExceptT String IO ([TS.Tag T.Text])
-getSoup s = do
-    bs <- makeGet s
-    txt <- ExceptT . return . eitherShow . T.decodeUtf8' $ bs
+getSoup :: String -> MonadGlugIO String ([TS.Tag T.Text])
+getSoup url = do
+    bs <- realTlsGetM url
+    txt <- hoistEither . eitherShow . T.decodeUtf8' $ bs
     return . TS.parseTags $ txt
-
-
-makeGet :: String -> ExceptT String IO BSL.ByteString
-makeGet url = ExceptT . liftM (fst) . execMonadGlugIO $ realTlsGetM url
-
 
 -- ----------------------------- Soup Handling ------------------------------ --
 
@@ -139,11 +133,6 @@ getImdbUrl (_:xs) = getImdbUrl xs
 
 -- -------------------------------- Utilities ------------------------------- --
 
--- \ If first operation errors, uses second operation. Similar to `mplus`
-(||>) :: Monad m => ExceptT a m b -> ExceptT a m b -> ExceptT a m b
-x ||> y = x `catchError` (\_ -> y)
-
-
 eitherShow :: Show a => Either a b -> Either String b
 eitherShow (Left x) = Left $ show x
 eitherShow (Right x) = Right x
@@ -155,10 +144,6 @@ eitherAttr [] s = Left $ "could not find attr " ++ (T.unpack s)
 eitherAttr ((k, v):xs) s
     | k == s    = Right v
     | otherwise = eitherAttr xs s
-
-
-liftEither :: Either a b -> ExceptT a IO b
-liftEither = ExceptT . return
 
 
 fromMaybe :: Maybe b -> String -> Either String b
