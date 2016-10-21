@@ -10,26 +10,24 @@ where
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as T
-import qualified Network.HTTP.Base as HTB
-import qualified Network.HTTP.Client as HTC
-import qualified Network.HTTP.Conduit as C
 import qualified Text.EditDistance as ED
 import qualified Text.HTML.TagSoup as TS
 
+import Control.Monad.Except
 import Data.Char (isSpace)
 import Data.List (group, sort, sortOn)
+import Network.HTTP.Base (urlEncode)
 import Text.Read (readEither)
-import Control.Monad.Except
 
-import Glug.Constants (useragent)
+import Glug.Monad (execMonadGlugIO, realTlsGetM)
 import Glug.SrtExtract (parseSrtFromZip)
 import Glug.Types (MovieSubtitles (..))
 
 
 searchurl :: String
 subscenebase :: String
-searchurl = "http://subscene.com/subtitles/title?q="
-subscenebase = "http://subscene.com"
+searchurl = "https://subscene.com/subtitles/title?q="
+subscenebase = "https://subscene.com"
 
 
 -- | Gets the subtitles from a movie
@@ -75,14 +73,8 @@ getSoup s = do
 
 
 makeGet :: String -> ExceptT String IO BSL.ByteString
-makeGet url = do
-    initReq <- C.parseUrl url
-    mgr <- manager
-    let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
-    (liftM C.responseBody) $ C.httpLbs req mgr
+makeGet url = ExceptT . liftM (fst) . execMonadGlugIO $ realTlsGetM url
 
-manager :: MonadIO m => m C.Manager
-manager = liftIO $ C.newManager HTC.defaultManagerSettings
 
 -- ----------------------------- Soup Handling ------------------------------ --
 
@@ -175,7 +167,7 @@ fromMaybe (Just x) _ = Right x
 
 
 quote_plus :: String -> String
-quote_plus = replacep20 . HTB.urlEncode
+quote_plus = replacep20 . urlEncode
 
 
 replacep20 :: String -> String
