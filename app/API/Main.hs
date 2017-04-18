@@ -20,7 +20,8 @@ import Network.HTTP.Types (status200, status404, status500, methodGet, Status)
 import Network.HTTP.Types.Header (Header, hContentType, hUserAgent)
 import Network.Wai
 import Network.Wai.Handler.Warp
-import Text.Read (readEither)
+import System.Environment (lookupEnv)
+import Text.Read (readEither, readMaybe)
 
 
 import API.Helpers
@@ -42,8 +43,18 @@ settings :: Settings
 settings = setBeforeMainLoop (beforeMainLoop) $ setLogger logReq defaultSettings
 
 
+port :: IO (Integer)
+port = do
+          portMayStr <- lookupEnv "PORT" 
+          return $ case portMayStr >>= readMaybe of
+              Just x -> x 
+              Nothing -> 3000
+
+
 beforeMainLoop :: IO ()
-beforeMainLoop = putStrLn "Waiting for connections"
+beforeMainLoop = do
+          portInt <- port
+          putStrLn $ "Waiting for connections on port " ++ (show portInt)
 
 
 logReq :: Request -> Status -> Maybe Integer -> IO ()
