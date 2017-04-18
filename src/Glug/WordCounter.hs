@@ -43,7 +43,9 @@ wordsInText t
 
 
 isSplitToken :: Char -> Bool
-isSplitToken = not . isLetter
+isSplitToken c
+    | c == '\'' = False
+    | otherwise = not . isLetter $ c
 
 
 data Tree = Tree WordCount Tree Tree
