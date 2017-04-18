@@ -37,6 +37,10 @@ spec = do
       let w = countWords [wordLine, wordLine']
       w `shouldBe` [WordCount "foo" 2 [(C.secondsToDiffTime 0), (C.secondsToDiffTime 80)]]
 
+    it "doesn't split contractions" $ do
+      let w = countWords [wordLine3]
+      w `shouldBe` [(WordCount "isn't" 1 [C.secondsToDiffTime 0])]
+
 
 sortResults :: [WordCount] -> [WordCount]
 sortResults = sortOn (occurances)
@@ -66,6 +70,15 @@ wordLine2 = SRT.Line  1
                           (SRT.Time 0 2 2 64))
                         Nothing
                         "bar"
+
+wordLine3 :: SRT.Line
+wordLine3 = SRT.Line  1
+                      (SRT.Range
+                          (SRT.Time 0 0 0 0)
+                          (SRT.Time 0 2 2 64))
+                        Nothing
+                        "isn't"
+
 
 wordLineSpecial :: SRT.Line
 wordLineSpecial = SRT.Line 1
