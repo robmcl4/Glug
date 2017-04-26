@@ -57,6 +57,7 @@ executable glug-exe
   build-depends:       aeson          >= 0.9.0.1 && < 0.10
                      , base
                      , bytestring     >= 0.10.6 && < 0.11
+                     , base64-bytestring >=1.0 && <1.1
                      , glug
                      , http-types
                      , transformers   >= 0.4.2 && < 0.5

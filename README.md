@@ -32,16 +32,16 @@ Searches for the given title name and returns possible candidates. Please urlenc
 ```json
 [
   {
-    "href": "/subtitles/finding-nemo",
+    "ref": "L3N1YnRpdGxlcy9maW5kaW5nLW5lbW8=",
     "title": "Finding Nemo",
     "subs": 194
   }
 ]
 ```
 
-### GET `/words/{href}`
+### GET `/words/{ref}`
 
-Gets interesting words from the chosen movie. Based on the path to the movie found in `/titles/{title}`.
+Gets interesting words from the chosen movie. Based on the path to the `ref` supplied by `/titles/{title}`.
 
 ```json
 {

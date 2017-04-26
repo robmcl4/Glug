@@ -93,14 +93,11 @@ serveSubs req = do
     if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
-            (_:url:[]) -> do
-                if not . isSubLink $ url
-                then return show404
-                else do
-                  best <- getBestWords (T.unpack url) rng
-                  case best of
-                    Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
-                    Right x -> return . responseLBS status200 hdrJson . encode $ x
+            (_:ref:[]) -> do
+              best <- getBestWords (T.unpack ref) rng
+              case best of
+                Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
+                Right x -> return . responseLBS status200 hdrJson . encode $ x
             _          -> return show404
   where hi = fromMaybe 6 $ queryParam req "min" >>= maybeI >>= liftM (min 13)
         lo = fromMaybe 3 $ queryParam req "max" >>= maybeI >>= liftM (max 1)
