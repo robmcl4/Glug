@@ -27,7 +27,7 @@ dropWordsByFrequency wcs (min_, max_) = filter (between . toInteger . WC.freq) w
 
 
 addIsCommon :: [WordRank] -> [WordRank]
-addIsCommon = flip addToHeuristic $ \wc -> if isCommon $ WC.text wc then 0 else 4
+addIsCommon = flip addToHeuristic $ \wc -> if isCommon $ WC.text wc then 0 else 5
     where isCommon = WT.containsStr WT.commonWords . T.unpack
 
 
