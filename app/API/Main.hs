@@ -28,7 +28,7 @@ import API.Helpers
 
 
 main :: IO ()
-main = runSettings settings app
+main = getSettings >>= \settings -> runSettings settings app
 
 
 app :: Application
@@ -39,15 +39,20 @@ app req respond = case pathInfo req of
                     _ -> respond show404
 
 
-settings :: Settings
-settings = setBeforeMainLoop (beforeMainLoop) $ setLogger logReq defaultSettings
+getSettings :: IO (Settings)
+getSettings = do
+          p <- fmap fromIntegral port
+          return $
+            setBeforeMainLoop (beforeMainLoop) $
+            setLogger logReq $
+            setPort p $ defaultSettings
 
 
 port :: IO (Integer)
 port = do
-          portMayStr <- lookupEnv "PORT" 
+          portMayStr <- lookupEnv "PORT"
           return $ case portMayStr >>= readMaybe of
-              Just x -> x 
+              Just x -> x
               Nothing -> 3000
 
 
