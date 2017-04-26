@@ -9,7 +9,7 @@ Glug is a haskell-based CLI and Javascript API for for making word-finding games
 For full API support save your api key for [The Movie Database](https://www.themoviedb.org/) to
 the environment variable `TMDB_KEY`.
 
-The web server listens on port `3000`.
+The web server listens on port `3000`. This can be changed by setting the `PORT` environment variable.
 
 ## Installation
 
