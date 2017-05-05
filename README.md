@@ -1,5 +1,7 @@
 # Glug
 
+[![Build Status](https://travis-ci.org/robmcl4/Glug.svg?branch=master)](https://travis-ci.org/robmcl4/Glug)
+
 Glug is a haskell-based CLI and Javascript API for for making word-finding games from movies.
 
 ## Usage
