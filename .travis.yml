@@ -19,6 +19,7 @@ script:
 before_deploy:
 - stack --no-terminal build --ghc-options=-O2
 deploy:
+  skip_cleanup: true
   provider: s3
   access_key_id: AKIAIR5HMJHB2I6U6I5Q
   secret_access_key:
