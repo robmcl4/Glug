@@ -24,7 +24,7 @@ deploy:
   secret_access_key:
     secure: vaDn1q/IdNitB7ki0zCTX6Xs9ErNsIoI0QKmeqE6Iq+kwkirLsTSoRAXhFNjv7nMww1lPepguJCVzPnJ+1XEz4vttdgFpe52SJN+LgzmOesjb4wYyv7bwpuYbGK61+goLU2rETdIB2EnHfYT6MhHRQBBTyJwGhR5yQzGDeSfGDHELYGlxza4gwLT+QONPg+YZu4eCwL53y4l6cZqZav07BivygoZ1pSQcviDd2IMJkmEOjMK6NFJpsdOpJ+jY/e7kBZxGNTgmEJBoQS4P0NoEE9ExvAlI0nxpFx/TavLRInqfEgVMoawstj27M+NFV9fZtFyxv+2BgWexUepQgrgH28CCq6o1DSsgC01oJOkr6Gw+0b1rSXQV5gj/nIEMKgs10lldTImzGGM+slEkzQLplUhUPWrVuRMqrYFcEsnkGre9T7VTYR5OcHLMl9jQFgP5K8k8f+RPLDefr1JswLPe6tr2JEKcOEvg1Kvidv6Y4zIZylPxshwnJYZisxu/sas074gBtnR2fv21ek+xuXKUn5s8s1yxp31ypxbfzpAqY9BOUWGXVR1tIxJ6wp6EOSY5T5Lfy7Az5SRFn7cMQhrUpY0te0EVJHek6n+QdMTrLYvw45jn74ln6CJgyTV+oZR0QJZQ2XLueQklwMSTEX1wwv03bMSPoYEHVUYCl6Zb8o=
   bucket: glug-deploys
-  local-dir: ".stack-work/install"
+  local-dir: ".stack-work/install/x86_64-linux/lts-5.10/7.10.3/bin"
   upload-dir: builds
   acl: private
   on:
