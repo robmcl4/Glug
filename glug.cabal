@@ -1,13 +1,13 @@
 name:                glug
 version:             0.1.0.0
-synopsis:            Initial project template from stack
+synopsis:            movie word analyzer
 description:         Please see README.md
-homepage:            http://github.com/githubuser/glug#readme
+homepage:            http://github.com/robmcl4/Glug#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
+author:              Robert McLaughlin
 maintainer:          example@example.com
-copyright:           2016 Author Here
+copyright:           2016 Robert McLaughlin
 category:            Web
 build-type:          Simple
 -- extra-source-files:
@@ -85,4 +85,4 @@ test-suite glug-test
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/glug
+  location: https://github.com/robmcl4/glug
