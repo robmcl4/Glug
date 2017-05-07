@@ -58,7 +58,7 @@ Gets interesting words from the chosen movie. Based on the path to the `ref` sup
 }
 ```
 
-### GET `/movie/{imdbid}`
+### GET `/title/{imdbid}`
 
 Gets a handful of information about the given movie from [The Movie Database](https://www.themoviedb.org/).
 
