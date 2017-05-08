@@ -40,7 +40,7 @@ instance ToJSON MovieSummary
 
 
 data RankedWord = RankedWord { word :: T.Text
-                             , occurances :: [Integer] }
+                             , occurrences :: [Integer] }
                              deriving (Eq, Show, Generic)
 instance ToJSON RankedWord
 
@@ -64,12 +64,12 @@ getBestWords refsz rng = do
                   mov' <- mov
                   let wcs = G.countWords . G.subtitles $ mov'
                   let best = (map toRW . take 25 . (flip G.bestCandidates) rng) $ wcs
-                  let rt = round . toRational . maximum . concat . map (G.occurances) $ wcs
+                  let rt = round . toRational . maximum . concat . map (G.occurrences) $ wcs
                   return MovieSummary { imdbid = G.imdbid mov'
                                       , ranked_words = best
                                       , runtime = rt }
   where toRW wr = RankedWord { word = T.fromStrict . G.text . G.wordcount $ wr
-                             , occurances = map (round . toRational) . G.occurances . G.wordcount $ wr
+                             , occurrences = map (round . toRational) . G.occurrences . G.wordcount $ wr
                              }
 
 

@@ -15,7 +15,7 @@ import Glug.Types (WordRank (..))
 
 -- | Gets the best candidates from a list of words, sorted best first
 bestCandidates :: [WC.WordCount] -- ^ The words to analyze
-                  -> (Integer, Integer) -- ^ The accepable range of occurances, (min, max)
+                  -> (Integer, Integer) -- ^ The accepable range of occurrences, (min, max)
                   -> [WordRank] -- ^ The best candidate words
 bestCandidates wcs range = reverse . sort . addIsCommon . addTimeGap . addSyllable . toWr $ dropWordsByFrequency wcs range
   where toWr wcs_ = map (flip WordRank $ 0) wcs_
@@ -39,11 +39,11 @@ addTimeGap :: [WordRank] -> [WordRank]
 addTimeGap wrs = flip addToHeuristic (timegap) wrs
     where timegap wc = round $ (mingap wc) / (expected wc) * 10
           expected = ((toRational maxtime) /) . fromIntegral . WC.freq
-          mingap = minimum . difflist . map (toRational) . WC.occurances
+          mingap = minimum . difflist . map (toRational) . WC.occurrences
           difflist [] = []
           difflist (_:[]) = []
           difflist (x:y:xs) = (y - x) : difflist (y:xs)
-          maxtime = maximum . concat . map (WC.occurances . wordcount) $ wrs
+          maxtime = maximum . concat . map (WC.occurrences . wordcount) $ wrs
 
 
 addToHeuristic :: [WordRank] -> (WC.WordCount -> Int32) -> [WordRank]

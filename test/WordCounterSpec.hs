@@ -43,7 +43,7 @@ spec = do
 
 
 sortResults :: [WordCount] -> [WordCount]
-sortResults = sortOn (occurances)
+sortResults = sortOn (occurrences)
 
 
 wordLine :: SRT.Line

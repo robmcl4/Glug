@@ -66,8 +66,8 @@ getSubs slnk = do
 
 getRange :: MaybeIO (Integer, Integer)
 getRange = do
-    n1 <- promptI "minimum occurances: "
-    n2 <- promptI "maximum occurances: "
+    n1 <- promptI "minimum occurrences: "
+    n2 <- promptI "maximum occurrences: "
     return (n1, n2)
 
 
@@ -79,14 +79,14 @@ printBest s rng = printWrs best
         printWr = putStrLn . wrtos
         wrtos wr = wctos . wordcount $ wr
         wctos wc = (TS.unpack . text $ wc) ++ ": " ++ (show . freq $ wc) ++ "\n" ++ occViz wc
-        occViz wc = "[" ++ (dashes . map (dashLoc) $ occurances wc) ++ "]"
+        occViz wc = "[" ++ (dashes . map (dashLoc) $ occurrences wc) ++ "]"
         dashes xs = addDash xs ndashes
         addDash [] _ = ""
         addDash _  0 = ""
         addDash occ n = (if (ndashes - n) `elem` occ then 'X' else '-') : (addDash occ (n-1))
         dashLoc dt = round $ toRational (dt / maxtime) * toRational ndashes
         ndashes = 80 :: Integer
-        maxtime = maximum . concat . map (occurances) $ wcs
+        maxtime = maximum . concat . map (occurrences) $ wcs
 
 
 -- ---------------------------- Utilities ----------------------------------- --

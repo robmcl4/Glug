@@ -52,7 +52,7 @@ Gets interesting words from the chosen movie. Based on the path to the `ref` sup
   "ranked_words": [
     {
       "word": "foo",
-      "occurances": [100, 4500, 5664]
+      "occurrences": [100, 4500, 5664]
     }
   ]
 }

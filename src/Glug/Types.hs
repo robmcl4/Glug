@@ -45,8 +45,8 @@ type ApiKey = String
 -- | A record of a given word's appearances in the movie
 data WordCount = WordCount {
         text :: T.Text -- ^ The word
-      , freq :: Int32 -- ^ Number of occurances of this word
-      , occurances :: [C.DiffTime] -- ^ A List of times this word occurs
+      , freq :: Int32 -- ^ Number of occurrences of this word
+      , occurrences :: [C.DiffTime] -- ^ A List of times this word occurs
       } deriving (Show, Eq)
 
 

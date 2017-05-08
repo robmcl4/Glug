@@ -19,9 +19,9 @@ countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
 
 
 addTime :: WordCount -> C.DiffTime -> WordCount
-addTime wc t = wc { freq = freq', occurances = occurances' }
+addTime wc t = wc { freq = freq', occurrences = occurrences' }
     where freq' = 1 + freq wc
-          occurances' = t : (occurances wc)
+          occurrences' = t : (occurrences wc)
 
 
 wordsInSubtitles :: SRT.Subtitles -> [(T.Text, C.DiffTime)]
