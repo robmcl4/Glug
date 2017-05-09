@@ -3,6 +3,7 @@ module Glug (
 , MovieSubtitles (..)
 , WordCount (..)
 , WordRank (..)
+, Subtitle (..)
 , IMDbId
 , ApiKey
 , countWords

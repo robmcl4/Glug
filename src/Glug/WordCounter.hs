@@ -4,16 +4,15 @@ module Glug.WordCounter (
 where
 
 import qualified Data.Text as T
-import qualified Text.Subtitles.SRT as SRT
 import qualified Data.Time.Clock as C
 import Data.Char (isLetter)
 
-import Glug.Types (WordCount (..))
+import Glug.Types (WordCount (..), Subtitle (..))
 
 
 -- | Collects the subtitles into individual words with some aggregate word
 --   details.
-countWords :: SRT.Subtitles  -- ^ The subtitles to analyze
+countWords :: [Subtitle]  -- ^ The subtitles to analyze
               -> [WordCount] -- ^ An aggregate summary of all words
 countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
 
@@ -24,12 +23,11 @@ addTime wc t = wc { freq = freq', occurrences = occurrences' }
           occurrences' = t : (occurrences wc)
 
 
-wordsInSubtitles :: SRT.Subtitles -> [(T.Text, C.DiffTime)]
+wordsInSubtitles :: [Subtitle] -> [(T.Text, C.DiffTime)]
 wordsInSubtitles []     = []
-wordsInSubtitles (l:xl) = (includeTime . wordsInText $ SRT.dialog l) ++ next
+wordsInSubtitles (l:xl) = (includeTime . wordsInText $ dialogue l) ++ next
     where next = wordsInSubtitles xl
-          time = toDiffTime $ SRT.from . SRT.range $ l
-          includeTime = map (\t -> (t, time))
+          includeTime = map (\t -> (t, timestamp l))
 
 
 wordsInText :: T.Text -> [T.Text]
@@ -71,8 +69,3 @@ enumerateTree t = enumerateTree' t []
 enumerateTree' :: Tree -> [WordCount] -> [WordCount]
 enumerateTree' Empty xs = xs
 enumerateTree' (Tree wc left right) xs = enumerateTree' right $ enumerateTree' left $ wc : xs
-
-
-toDiffTime :: SRT.Time -> C.DiffTime
-toDiffTime t = C.secondsToDiffTime . toInteger $
-      (SRT.hour t) * 60 * 60 + (SRT.minutes t) * 60 + (SRT.seconds t)

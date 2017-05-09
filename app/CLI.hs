@@ -4,7 +4,6 @@ module CLI (
 
 import qualified Data.Text.Lazy as T
 import qualified Data.Text as TS
-import qualified Text.Subtitles.SRT as SRT
 import Data.Char (isLatin1)
 import System.IO (hFlush, stdout)
 import Text.Read (readEither)
@@ -56,7 +55,7 @@ chooseTitle bs = do
           getLnk (l, _, _) = l
 
 
-getSubs :: T.Text -> MaybeIO SRT.Subtitles
+getSubs :: T.Text -> MaybeIO [Subtitle]
 getSubs slnk = do
     subs <- liftIO $ getSubtitles $ T.unpack slnk
     case liftM (subtitles) subs of
@@ -71,7 +70,7 @@ getRange = do
     return (n1, n2)
 
 
-printBest :: SRT.Subtitles -> (Integer, Integer) -> IO ()
+printBest :: [Subtitle] -> (Integer, Integer) -> IO ()
 printBest s rng = printWrs best
   where best = (take 8) $ bestCandidates wcs rng
         wcs = countWords s

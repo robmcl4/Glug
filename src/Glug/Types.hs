@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Glug.Types (
   MovieDetails (..)
@@ -7,22 +8,34 @@ module Glug.Types (
 , ApiKey
 , WordCount (..)
 , WordRank (..)
+, Subtitle (..)
 ) where
 
-import qualified Text.Subtitles.SRT as SRT
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Time.Clock as C
 
-import Data.Aeson (ToJSON)
+import Data.Aeson
 import Data.Int (Int32)
 import GHC.Generics
 
 -- | Information gained after scraping a movie's subtitles.
 data MovieSubtitles = MovieSubtitles {
         imdbid :: TL.Text -- ^ The IMDb ID of the movie
-      , subtitles :: SRT.Subtitles -- ^ The subtitles found
+      , subtitles :: [Subtitle] -- ^ The subtitles found
       } deriving (Eq, Show)
+
+
+-- | A single subtitle line.
+data Subtitle = Subtitle {
+        dialogue :: T.Text
+      , timestamp :: C.DiffTime
+      } deriving (Eq, Show)
+instance ToJSON Subtitle where
+  toJSON (Subtitle d t) = object ["dialogue" .= d, "timestamp" .= ts]
+      where
+            ts :: Integer
+            ts = round t
 
 
 -- | Details about a movie from The Movie Database

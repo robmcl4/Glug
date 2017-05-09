@@ -8,7 +8,7 @@ import Data.List (sortOn)
 import Data.Int (Int32)
 import Test.Hspec
 import Glug.WordCounter
-import Glug.Types (WordCount (..))
+import Glug.Types (WordCount (..), Subtitle (..))
 
 
 main :: IO ()
@@ -46,44 +46,25 @@ sortResults :: [WordCount] -> [WordCount]
 sortResults = sortOn (occurrences)
 
 
-wordLine :: SRT.Line
-wordLine = SRT.Line 1
-                    (SRT.Range
-                        (SRT.Time 0 0 0 0)
-                        (SRT.Time 0 1 1 32))
-                      Nothing
-                      "foo"
+wordLine :: Subtitle
+wordLine = Subtitle { dialogue = "foo"
+                    , timestamp = C.secondsToDiffTime 0 }
 
-wordLine' :: SRT.Line
-wordLine' = SRT.Line 1
-                    (SRT.Range
-                        (SRT.Time 0 1 20 0)
-                        (SRT.Time 0 1 25 0))
-                      Nothing
-                      "foo"
+wordLine' :: Subtitle
+wordLine' = Subtitle { dialogue = "foo"
+                    , timestamp = C.secondsToDiffTime 80 }
 
 
-wordLine2 :: SRT.Line
-wordLine2 = SRT.Line  1
-                      (SRT.Range
-                          (SRT.Time 0 1 1 32)
-                          (SRT.Time 0 2 2 64))
-                        Nothing
-                        "bar"
-
-wordLine3 :: SRT.Line
-wordLine3 = SRT.Line  1
-                      (SRT.Range
-                          (SRT.Time 0 0 0 0)
-                          (SRT.Time 0 2 2 64))
-                        Nothing
-                        "isn't"
+wordLine2 :: Subtitle
+wordLine2 = Subtitle { dialogue = "bar"
+                     , timestamp = C.secondsToDiffTime 61 }
 
 
-wordLineSpecial :: SRT.Line
-wordLineSpecial = SRT.Line 1
-                    (SRT.Range
-                        (SRT.Time 0 0 0 0)
-                        (SRT.Time 0 1 1 32))
-                      Nothing
-                      "ôèèüàç"
+wordLine3 :: Subtitle
+wordLine3 = Subtitle { dialogue = "isn't"
+                     , timestamp = C.secondsToDiffTime 0 }
+
+
+wordLineSpecial :: Subtitle
+wordLineSpecial = Subtitle { dialogue = "ôèèüàç"
+                           , timestamp = C.secondsToDiffTime 0 }

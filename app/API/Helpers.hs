@@ -2,8 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 
 module API.Helpers (
-  TitleLink
-, getTitles
+  getTitles
 , getBestWords
 , getTitleDetails
 , isImdbId
@@ -34,7 +33,8 @@ instance ToJSON TitleLink
 
 data MovieSummary = MovieSummary { imdbid :: T.Text
                                  , ranked_words :: [RankedWord]
-                                 , runtime :: Integer }
+                                 , runtime :: Integer
+                                 , first_subtitles :: [G.Subtitle] }
                                  deriving (Eq, Show, Generic)
 instance ToJSON MovieSummary
 
@@ -67,7 +67,8 @@ getBestWords refsz rng = do
                   let rt = round . toRational . maximum . concat . map (G.occurrences) $ wcs
                   return MovieSummary { imdbid = G.imdbid mov'
                                       , ranked_words = best
-                                      , runtime = rt }
+                                      , runtime = rt
+                                      , first_subtitles = take 10 . G.subtitles $ mov' }
   where toRW wr = RankedWord { word = T.fromStrict . G.text . G.wordcount $ wr
                              , occurrences = map (round . toRational) . G.occurrences . G.wordcount $ wr
                              }

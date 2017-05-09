@@ -5,11 +5,12 @@ module Glug.SrtExtract (
 )
 where
 
+import qualified Codec.Archive.Zip as Z
+import qualified Data.ByteString.Lazy as B
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as Enc
 import qualified Data.Text.Encoding.Error as Enc
-import qualified Data.ByteString.Lazy as B
-import qualified Codec.Archive.Zip as Z
+import qualified Data.Time.Clock as C
 import qualified Text.Subtitles.SRT as SRT
 
 import Data.List (find)
@@ -19,9 +20,14 @@ import Control.Exception (try, evaluate)
 import Control.Monad.Except (MonadError, catchError, throwError)
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
+import Glug.Types (Subtitle (..))
 
-parseSrtFromZip :: MonadError String m => B.ByteString -> m SRT.Subtitles
-parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs
+
+parseSrtFromZip :: MonadError String m => B.ByteString -> m [Subtitle]
+parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs >>= return . map toSubtitle
+    where toSubtitle :: SRT.Line -> Subtitle
+          toSubtitle s = Subtitle { dialogue = SRT.dialog s
+                                  , timestamp = toDiffTime . SRT.from . SRT.range $ s }
 
 
 bsToSubs :: MonadError String m => B.ByteString -> m SRT.Subtitles
@@ -50,6 +56,11 @@ getEntry arch = do
     fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fname arch)
   where fp = find (\s -> endsIn s "eng.srt") (Z.filesInArchive arch)
         fp' = find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
+
+
+toDiffTime :: SRT.Time -> C.DiffTime
+toDiffTime t = C.secondsToDiffTime . toInteger $
+      (SRT.hour t) * 60 * 60 + (SRT.minutes t) * 60 + (SRT.seconds t)
 
 
 endsIn :: String -> String -> Bool
