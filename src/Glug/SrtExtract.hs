@@ -28,8 +28,9 @@ parseSrtFromZip zipbs = do
       srtbs <- getSrtBS zipbs
       map toSubtitle <$> bsToSubs srtbs
     where toSubtitle :: SRT.Line -> Subtitle
-          toSubtitle s = Subtitle { dialogue = SRT.dialog s
-                                  , timestamp = toDiffTime . SRT.from . SRT.range $ s }
+          toSubtitle (SRT.Line _ (SRT.Range f _) _ d) = Subtitle
+                                  { dialogue = d
+                                  , timestamp = toDiffTime f }
 
 
 bsToSubs :: MonadError String m => B.ByteString -> m SRT.Subtitles

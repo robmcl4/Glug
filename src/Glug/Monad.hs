@@ -10,6 +10,7 @@ module Glug.Monad (
   MonadGlugIO (..)
 , HttpGetM
 , execMonadGlugIO
+, noLogExecMonadGlugIO
 , hoistEither
 , hoistMaybe
 , logM
@@ -22,7 +23,6 @@ import qualified Network.HTTP.Conduit as C
 
 import Control.Monad.Except
 import Control.Monad.Writer.Lazy
-import Data.Bifunctor (first)
 import Data.Time.Clock
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
@@ -51,6 +51,9 @@ instance MonadError e (MonadGlugIO e) where
 execMonadGlugIO :: MonadGlugIO e a -> IO (Either e a, [String])
 execMonadGlugIO = runWriterT . runExceptT . runMonadGlugIO
 
+-- | Run MonadGlugIO and throw out the message log
+noLogExecMonadGlugIO :: MonadGlugIO e a -> IO (Either e a)
+noLogExecMonadGlugIO = fmap fst . execMonadGlugIO
 
 -- | Convert an Either into a MonadError
 hoistEither :: MonadError e m => Either e a -> m a
@@ -78,7 +81,7 @@ type HttpGetM =  forall m. (MonadIO m, MonadError String m, MonadWriter [String]
 realTlsGetM :: HttpGetM
 realTlsGetM url = do
     logM "realTlsGetM" $ "getting URL " ++ url
-    initReq <- hoistEither . first show . C.parseUrl $ url
+    initReq <- hoistMaybe "could not parse url" . C.parseRequest $ url
     mgr <- liftIO $ C.newManager C.tlsManagerSettings
     let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
     C.responseBody <$> C.httpLbs req mgr

@@ -18,7 +18,7 @@ import Data.List (group, sort, sortOn)
 import Network.HTTP.Base (urlEncode)
 import Text.Read (readEither)
 
-import Glug.Monad (MonadGlugIO (..), execMonadGlugIO, realTlsGetM, hoistEither)
+import Glug.Monad (MonadGlugIO (..), noLogExecMonadGlugIO, realTlsGetM, hoistEither)
 import Glug.SrtExtract (parseSrtFromZip)
 import Glug.Types (MovieSubtitles (..))
 
@@ -33,7 +33,7 @@ subscenebase = "https://subscene.com"
 getSubtitles :: String -- ^ The path to the subtitle listing on subscene
                 -> IO (Either String MovieSubtitles) -- ^ Either an error
                                                      -- message or movie subtitles
-getSubtitles s = fmap fst . execMonadGlugIO $ do
+getSubtitles s = noLogExecMonadGlugIO $ do
     soup <- getSoup $ subscenebase ++ s
     cands <- hoistEither $ getSubLinks soup
     id_ <- hoistEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
@@ -56,7 +56,7 @@ candidateTitles :: String
                    -> IO (Either String [(T.Text, T.Text, Integer)])
                    -- ^ Either an error message or a list of
                    --   (href, title, no. of subs)
-candidateTitles s = fmap fst . execMonadGlugIO $ do
+candidateTitles s = noLogExecMonadGlugIO $ do
     soup <- getSoup $ searchurl ++ quotePlus s
     titles <- hoistEither $ getTitles soup
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles
@@ -152,13 +152,13 @@ fromMaybe (Just x) _ = Right x
 
 
 quotePlus :: String -> String
-quotePlus = replacep20 . urlEncode
+quotePlus = replace20 . urlEncode
 
 
-replacep20 :: String -> String
-replacep20 [] = []
-replacep20 [x] = [x]
-replacep20 [x, y] = [x, y]
-replacep20 (x:y:z:zs)
-  | [x, y, z] == "%20" = '+' : replacep20 zs
-  | otherwise          = x : replacep20 (y:z:zs)
+replace20 :: String -> String
+replace20 [] = []
+replace20 [x] = [x]
+replace20 [x, y] = [x, y]
+replace20 (x:y:z:zs)
+  | [x, y, z] == "%20" = '+' : replace20 zs
+  | otherwise          = x : replace20 (y:z:zs)
