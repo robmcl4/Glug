@@ -10,7 +10,7 @@ module Glug.Monad (
   MonadGlugIO (..)
 , HttpGetM
 , execMonadGlugIO
-, noLogExecMonadGlugIO
+, execMonadGlugIOWithCache
 , hoistEither
 , hoistMaybe
 , logM
@@ -21,8 +21,11 @@ module Glug.Monad (
 import qualified Data.ByteString.Lazy as BSL
 import qualified Network.HTTP.Conduit as C
 
+import Control.Concurrent.MVar
 import Control.Monad.Except
+import Control.Monad.Trans.Reader
 import Control.Monad.Writer.Lazy
+import Data.Cache.LRU
 import Data.Time.Clock
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
@@ -31,7 +34,7 @@ import Glug.Constants (useragent)
 -- -------------------------------- MonadGlugIO --------------------------------
 
 newtype MonadGlugIO e a = MonadGlugIO {
-    runMonadGlugIO :: ExceptT e (WriterT [String] IO) a
+    runMonadGlugIO :: ReaderT (MVar (LRU String BSL.ByteString)) (ExceptT e (WriterT [String] IO)) a
   } deriving (Functor, Applicative, Monad, MonadIO)
 
 
@@ -49,11 +52,20 @@ instance MonadError e (MonadGlugIO e) where
 
 -- | Run MonadGlugIO and reduce to Either for a result and a message log
 execMonadGlugIO :: MonadGlugIO e a -> IO (Either e a, [String])
-execMonadGlugIO = runWriterT . runExceptT . runMonadGlugIO
+execMonadGlugIO mgio = do
+    mvr <- newMVar . newLRU $ Just 64
+    execMonadGlugIOWithCache mvr mgio
 
--- | Run MonadGlugIO and throw out the message log
-noLogExecMonadGlugIO :: MonadGlugIO e a -> IO (Either e a)
-noLogExecMonadGlugIO = fmap fst . execMonadGlugIO
+
+-- | Run MonadGlugIO with a shared cache of external requests
+execMonadGlugIOWithCache :: MVar (LRU String BSL.ByteString)
+                            -- ^ the shared cache
+                            -> MonadGlugIO e a
+                            -- ^ the monad instance
+                            -> IO (Either e a, [String])
+                            -- ^ either the answer or an error, plus a message log
+execMonadGlugIOWithCache mvr mgio = runWriterT . runExceptT $ runReaderT (runMonadGlugIO mgio) mvr
+
 
 -- | Convert an Either into a MonadError
 hoistEither :: MonadError e m => Either e a -> m a

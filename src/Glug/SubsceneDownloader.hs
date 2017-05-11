@@ -18,7 +18,7 @@ import Data.List (group, sort, sortOn)
 import Network.HTTP.Base (urlEncode)
 import Text.Read (readEither)
 
-import Glug.Monad (MonadGlugIO (..), noLogExecMonadGlugIO, realTlsGetM, hoistEither)
+import Glug.Monad (MonadGlugIO (..), execMonadGlugIO, realTlsGetM, hoistEither)
 import Glug.SrtExtract (parseSrtFromZip)
 import Glug.Types (MovieSubtitles (..))
 
@@ -33,7 +33,7 @@ subscenebase = "https://subscene.com"
 getSubtitles :: String -- ^ The path to the subtitle listing on subscene
                 -> IO (Either String MovieSubtitles) -- ^ Either an error
                                                      -- message or movie subtitles
-getSubtitles s = noLogExecMonadGlugIO $ do
+getSubtitles s = fmap fst . execMonadGlugIO $ do
     soup <- getSoup $ subscenebase ++ s
     cands <- hoistEither $ getSubLinks soup
     id_ <- hoistEither $ getImdbUrl soup >>= extractId >>= pad >>= Right . T.append "tt"
@@ -56,7 +56,7 @@ candidateTitles :: String
                    -> IO (Either String [(T.Text, T.Text, Integer)])
                    -- ^ Either an error message or a list of
                    --   (href, title, no. of subs)
-candidateTitles s = noLogExecMonadGlugIO $ do
+candidateTitles s = fmap fst . execMonadGlugIO $ do
     soup <- getSoup $ searchurl ++ quotePlus s
     titles <- hoistEither $ getTitles soup
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles
