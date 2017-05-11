@@ -19,8 +19,8 @@ import Glug.Types (MovieDetails (..), IMDbId, ApiKey)
 import Glug.Monad (execMonadGlugIO, HttpGetM)
 
 
-tmdb_base :: String
-tmdb_base = "https://api.themoviedb.org/3/"
+tmdbBase :: String
+tmdbBase = "https://api.themoviedb.org/3/"
 
 
 -- | Gets details about a movie by IMDb Id
@@ -32,13 +32,13 @@ getDetailsOfMovie :: IMDbId
                      -- ^ A (stubbable) function for getting HTTP requests
                      -> IO (Either String MovieDetails)
                      -- ^ Either an error message or movie details
-getDetailsOfMovie i k f = liftM (fst) . execMonadGlugIO $ do
-    bsl <- f $ tmdb_base ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
+getDetailsOfMovie i k f = fmap fst . execMonadGlugIO $ do
+    bsl <- f $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
     id_ <- dec' bsl >>= getMovie >>= lookupInt "id"
-    bsl' <- f $ tmdb_base ++ "movie/" ++ (show id_) ++ "?api_key=" ++ k
+    bsl' <- f $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k
     obj <- dec' bsl'
     post_path <- lookupText "poster_path" obj
-    mov_len <- lookupInt "runtime" obj >>= return . ((*) 60)
+    mov_len <- (60 *) <$> lookupInt "runtime" obj
     ovv <- lookupText "overview" obj
     return MovieDetails { runtime = mov_len, poster = post_path, overview = ovv }
   where dec' bs = case (decode bs :: Maybe Value) of

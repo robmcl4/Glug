@@ -31,7 +31,7 @@ import Glug.Constants (useragent)
 -- -------------------------------- MonadGlugIO --------------------------------
 
 newtype MonadGlugIO e a = MonadGlugIO {
-    runMonadGlugIO :: ExceptT e (WriterT [String] (IO)) a
+    runMonadGlugIO :: ExceptT e (WriterT [String] IO) a
   } deriving (Functor, Applicative, Monad, MonadIO)
 
 
@@ -48,7 +48,7 @@ instance MonadError e (MonadGlugIO e) where
 
 
 -- | Run MonadGlugIO and reduce to Either for a result and a message log
-execMonadGlugIO :: MonadGlugIO e a -> IO ((Either e a), [String])
+execMonadGlugIO :: MonadGlugIO e a -> IO (Either e a, [String])
 execMonadGlugIO = runWriterT . runExceptT . runMonadGlugIO
 
 
@@ -61,14 +61,14 @@ hoistEither (Left x) = throwError x
 -- | Convert a Maybe into a MonadError, using the given error when Nothing is found.
 hoistMaybe :: MonadError e m => e -> Maybe a -> m a
 hoistMaybe _ (Just x) = return x
-hoistMaybe e (Nothing) = throwError e
+hoistMaybe e Nothing  = throwError e
 
 
 -- | Log a message with a module tag, also embeds timestamp
 logM :: (MonadIO m, MonadWriter [String] m) => String -> String -> m ()
 logM tag msg = do
-    t <- liftIO $ getCurrentTime >>= return . formatTime defaultTimeLocale "%FT%X"
-    tell $ [t ++ " [" ++ tag ++ "] " ++ msg]
+    t <- liftIO $ formatTime defaultTimeLocale "%FT%X" <$> getCurrentTime
+    tell [t ++ " [" ++ tag ++ "] " ++ msg]
 
 
 -- ------------------------------ Network Requests -----------------------------
@@ -81,4 +81,4 @@ realTlsGetM url = do
     initReq <- hoistEither . first show . C.parseUrl $ url
     mgr <- liftIO $ C.newManager C.tlsManagerSettings
     let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
-    (liftM C.responseBody) $ C.httpLbs req mgr
+    C.responseBody <$> C.httpLbs req mgr

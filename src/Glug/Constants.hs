@@ -16,4 +16,4 @@ version :: T.Text
 version = T.pack . showVersion $ P.version
 
 useragent :: BS.ByteString
-useragent = BS.concat [("haskell/glug " :: BS.ByteString), ENC.encodeUtf8 version]
+useragent = BS.concat ["haskell/glug " :: BS.ByteString, ENC.encodeUtf8 version]

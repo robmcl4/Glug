@@ -43,14 +43,14 @@ makeTrie = Trie False Empty
 
 
 makeTrieWithWords :: [String] -> Trie
-makeTrieWithWords = foldl' (addStr) makeTrie
+makeTrieWithWords = foldl' addStr makeTrie
 
 
 addStr :: Trie -> String -> Trie
-addStr (Trie trm Empty) s  = let tri = mkTrieOfString s
+addStr (Trie trm Empty) s   = let tri = mkTrieOfString s
                               in case tri of
                                 Trie trm' tre -> Trie (trm' || trm) tre
-addStr (Trie trm t) (x:[]) = Trie trm (findAndModify t x (\mtri ->
+addStr (Trie trm t) [x] = Trie trm (findAndModify t x (\mtri ->
         case mtri of
             Nothing -> Trie True Empty
             Just (Trie _ t') -> Trie True t'

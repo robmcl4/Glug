@@ -24,7 +24,9 @@ import Glug.Types (Subtitle (..))
 
 
 parseSrtFromZip :: MonadError String m => B.ByteString -> m [Subtitle]
-parseSrtFromZip zipbs = getSrtBS zipbs >>= bsToSubs >>= return . map toSubtitle
+parseSrtFromZip zipbs = do
+      srtbs <- getSrtBS zipbs
+      map toSubtitle <$> bsToSubs srtbs
     where toSubtitle :: SRT.Line -> Subtitle
           toSubtitle s = Subtitle { dialogue = SRT.dialog s
                                   , timestamp = toDiffTime . SRT.from . SRT.range $ s }
@@ -35,8 +37,8 @@ bsToSubs bs = do
     t <- tag "decoding" . fromEither . eitherShow . decode' $ bs
     tag "using srt parser" . fromEither . parseOnly SRT.parseSRT . T.toStrict $ t
   where bom = B.unpack $ B.take 3 bs
-        decode | (take 2 bom) == [0xFE, 0xFF] = Enc.decodeUtf16BE . B.drop 2
-               | (take 2 bom) == [0xFF, 0xFE] = Enc.decodeUtf16LE . B.drop 2
+        decode | take 2 bom == [0xFE, 0xFF] = Enc.decodeUtf16BE . B.drop 2
+               | take 2 bom == [0xFF, 0xFE] = Enc.decodeUtf16LE . B.drop 2
                | bom == [0xEF, 0xBB, 0xBF]    = Enc.decodeUtf8 . B.drop 3
                | otherwise                    = Enc.decodeUtf8
         decode' :: B.ByteString -> Either Enc.UnicodeException T.Text
@@ -54,13 +56,13 @@ getEntry :: MonadError String m => Z.Archive -> m Z.Entry
 getEntry arch = do
     fname <- fromMaybe "could not find srt" $ fp <|> fp'
     fromMaybe "this shouldn't happen: no entry found" (Z.findEntryByPath fname arch)
-  where fp = find (\s -> endsIn s "eng.srt") (Z.filesInArchive arch)
-        fp' = find (\s -> endsIn s ".srt") (Z.filesInArchive arch)
+  where fp = find (`endsIn` "eng.srt") (Z.filesInArchive arch)
+        fp' = find (`endsIn` ".srt") (Z.filesInArchive arch)
 
 
 toDiffTime :: SRT.Time -> C.DiffTime
 toDiffTime t = C.secondsToDiffTime . toInteger $
-      (SRT.hour t) * 60 * 60 + (SRT.minutes t) * 60 + (SRT.seconds t)
+      SRT.hour t * 60 * 60 + SRT.minutes t * 60 + SRT.seconds t
 
 
 endsIn :: String -> String -> Bool

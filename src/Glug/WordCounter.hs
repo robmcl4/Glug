@@ -14,13 +14,13 @@ import Glug.Types (WordCount (..), Subtitle (..))
 --   details.
 countWords :: [Subtitle]  -- ^ The subtitles to analyze
               -> [WordCount] -- ^ An aggregate summary of all words
-countWords = enumerateTree . (addAllToTree Empty) . wordsInSubtitles
+countWords = enumerateTree . addAllToTree Empty . wordsInSubtitles
 
 
 addTime :: WordCount -> C.DiffTime -> WordCount
 addTime wc t = wc { freq = freq', occurrences = occurrences' }
     where freq' = 1 + freq wc
-          occurrences' = t : (occurrences wc)
+          occurrences' = t : occurrences wc
 
 
 wordsInSubtitles :: [Subtitle] -> [(T.Text, C.DiffTime)]
@@ -34,8 +34,8 @@ wordsInText :: T.Text -> [T.Text]
 wordsInText t
       | T.null t       = []
       | T.null nextToc = []
-      | otherwise      = nextToc : (wordsInText rest)
-    where t'      = T.dropWhile (isSplitToken) t
+      | otherwise      = nextToc : wordsInText rest
+    where t'      = T.dropWhile isSplitToken t
           nextToc = T.toLower $ T.takeWhile (not . isSplitToken) t'
           rest    = T.drop (T.length nextToc) t'
 
@@ -53,13 +53,13 @@ data Tree = Tree WordCount Tree Tree
 addToTree :: Tree -> (T.Text, C.DiffTime) -> Tree
 addToTree Empty (s, t) = Tree (WordCount s 1 [t]) Empty Empty
 addToTree (Tree wc left right) (s, t)
-    | s == (text wc)      = Tree (addTime wc t) left right
-    | s > (text wc)       = Tree wc (addToTree left (s, t)) right
-    | otherwise           = Tree wc left (addToTree right (s, t))
+    | s == text wc      = Tree (addTime wc t) left right
+    | s > text wc       = Tree wc (addToTree left (s, t)) right
+    | otherwise         = Tree wc left (addToTree right (s, t))
 
 
 addAllToTree :: Tree -> [(T.Text, C.DiffTime)] -> Tree
-addAllToTree tre txts = foldr (flip addToTree) tre txts
+addAllToTree = foldr (flip addToTree)
 
 
 enumerateTree :: Tree -> [WordCount]
