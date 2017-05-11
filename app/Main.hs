@@ -1,6 +1,6 @@
 module Main where
 
-import qualified CLI as CLI
+import qualified CLI
 import qualified API.Main as API
 
 import System.Environment

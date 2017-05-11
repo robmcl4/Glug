@@ -99,7 +99,7 @@ promptI s = do
 
 
 prompt :: String -> MaybeIO String
-prompt s = MaybeT $ putStr s >> hFlush stdout >> liftM (Just) getLine
+prompt s = MaybeT $ putStr s >> hFlush stdout >> liftM Just getLine
 
 
 putStrLn' :: String -> MaybeIO a

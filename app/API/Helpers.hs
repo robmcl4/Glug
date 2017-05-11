@@ -46,25 +46,22 @@ instance ToJSON RankedWord
 
 
 getTitles :: String -> IO (Either String [TitleLink])
-getTitles s = do
-    fmap (fmap (fmap mkTitleLink)) $ G.candidateTitles s
+getTitles s = fmap (map mkTitleLink) <$> G.candidateTitles s
   where mkTitleLink (a, b, c) = TitleLink { ref = toBase64 a, title = b, subs = c }
 
 
 getBestWords :: String -> (Integer, Integer) -> IO (Either String MovieSummary)
-getBestWords refsz rng = do
-    case fromBase64 refsz of
+getBestWords refsz rng = case fromBase64 refsz of
         Left  s   -> return . Left $ s
-        Right url -> do
-          if not $ isSubLink url
+        Right url -> if not $ isSubLink url
             then return . Left $ "not subscene url"
             else do
               mov <- G.getSubtitles url
               return $ do
                   mov' <- mov
                   let wcs = G.countWords . G.subtitles $ mov'
-                  let best = (map toRW . take 25 . (flip G.bestCandidates) rng) $ wcs
-                  let rt = round . toRational . maximum . concat . map (G.occurrences) $ wcs
+                  let best = map toRW . take 25 $ G.bestCandidates wcs rng
+                  let rt = round . toRational . maximum . concatMap G.occurrences $ wcs
                   return MovieSummary { imdbid = G.imdbid mov'
                                       , ranked_words = best
                                       , runtime = rt
