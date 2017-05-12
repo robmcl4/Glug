@@ -102,8 +102,9 @@ realTlsGetM url = do
         liftIO $ putMVar mvr cache'
         return x
       Nothing -> do
+        liftIO $ putMVar mvr cache
         val <- _realTlsGetM url
-        liftIO $ putMVar mvr (LRU.insert url val cache)
+        liftIO . modifyMVar_ mvr $ return . LRU.insert url val
         return val
 
 _realTlsGetM :: String -> MonadGlugIO String BSL.ByteString
