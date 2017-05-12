@@ -12,6 +12,7 @@ module Glug.Monad (
 , hoistMaybe
 , logM
 , realTlsGetM
+, throwError
 ) where
 
 

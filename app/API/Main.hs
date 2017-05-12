@@ -39,7 +39,7 @@ main = do
 app :: MVar (LRU String B.ByteString) -> Application
 app mvr req respond = case pathInfo req of
                     ["titles",_] -> serveTitles mvr req >>= respond
-                    ["words",_]  -> serveSubs req >>= respond
+                    ["words",_]  -> serveSubs mvr req >>= respond
                     ["title",_] -> serveTitleDetails req >>= respond
                     _ -> respond show404
 
@@ -90,12 +90,12 @@ serveTitles cache req = if requestMethod req /= methodGet
              _            -> return show404
 
 
-serveSubs :: Request -> IO Response
-serveSubs req = if requestMethod req /= methodGet
+serveSubs :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveSubs cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
             [_, ref] -> do
-              best <- getBestWords (T.unpack ref) rng
+              best <- fmap fst . G.execMonadGlugIOWithCache cache $ getBestWords (T.unpack ref) rng
               case best of
                 Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                 Right x -> return . responseLBS status200 hdrJson . encode $ x

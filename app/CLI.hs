@@ -57,7 +57,7 @@ chooseTitle bs = do
 
 getSubs :: T.Text -> MaybeIO [Subtitle]
 getSubs slnk = do
-    subs <- liftIO $ getSubtitles $ T.unpack slnk
+    subs <- liftIO $ fmap fst . execMonadGlugIO . getSubtitles $ T.unpack slnk
     case liftM (subtitles) subs of
       Left s -> putStrLn' $ "Could not find .srt: " ++ s
       Right s -> return s

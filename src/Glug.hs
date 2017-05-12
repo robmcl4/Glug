@@ -14,6 +14,7 @@ module Glug (
 , execMonadGlugIOWithCache
 , getSubtitles
 , getDetailsOfMovie
+, throwError
 ) where
 
 import Glug.Types

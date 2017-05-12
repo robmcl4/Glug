@@ -8,11 +8,12 @@ module API.Helpers (
 , isImdbId
 ) where
 
-import Data.ByteString.Base64.URL.Lazy as B64
+import qualified Data.ByteString.Base64.URL.Lazy as B64
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.Encoding as ENC
 import qualified Data.Text as TS
 import qualified System.Environment as ENV
+
 
 import Data.Aeson
 import Data.Char (isDigit)
@@ -49,22 +50,20 @@ getTitles s = map mkTitleLink <$> G.candidateTitles s
   where mkTitleLink (a, b, c) = TitleLink { ref = toBase64 a, title = b, subs = c }
 
 
-getBestWords :: String -> (Integer, Integer) -> IO (Either String MovieSummary)
+getBestWords :: String -> (Integer, Integer) -> G.MonadGlugIO String MovieSummary
 getBestWords refsz rng = case fromBase64 refsz of
-        Left  s   -> return . Left $ s
+        Left  s   -> G.throwError s
         Right url -> if not $ isSubLink url
-            then return . Left $ "not subscene url"
+            then G.throwError "not subscene url"
             else do
               mov <- G.getSubtitles url
-              return $ do
-                  mov' <- mov
-                  let wcs = G.countWords . G.subtitles $ mov'
-                  let best = map toRW . take 25 $ G.bestCandidates wcs rng
-                  let rt = round . toRational . maximum . concatMap G.occurrences $ wcs
-                  return MovieSummary { imdbid = G.imdbid mov'
-                                      , ranked_words = best
-                                      , runtime = rt
-                                      , first_subtitles = take 10 . G.subtitles $ mov' }
+              let wcs = G.countWords . G.subtitles $ mov
+              let best = map toRW . take 25 $ G.bestCandidates wcs rng
+              let rt = round . toRational . maximum . concatMap G.occurrences $ wcs
+              return MovieSummary { imdbid = G.imdbid mov
+                                  , ranked_words = best
+                                  , runtime = rt
+                                  , first_subtitles = take 10 . G.subtitles $ mov }
   where toRW wr = RankedWord { word = T.fromStrict . G.text . G.wordcount $ wr
                              , occurrences = map (round . toRational) . G.occurrences . G.wordcount $ wr
                              }
