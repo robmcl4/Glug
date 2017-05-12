@@ -15,7 +15,7 @@ import Control.Monad.Except
 import Data.Aeson
 
 import Glug.Types (MovieDetails (..), IMDbId, ApiKey)
-import Glug.Monad (execMonadGlugIO, realTlsGetM)
+import Glug.Monad (MonadGlugIO (..), realTlsGetM)
 
 
 tmdbBase :: String
@@ -26,10 +26,10 @@ tmdbBase = "https://api.themoviedb.org/3/"
 getDetailsOfMovie :: IMDbId
                      -- ^ The IMDb ID
                      -> ApiKey
-                     -- ^ A (stubbable) function for getting HTTP requests
-                     -> IO (Either String MovieDetails)
+                     -- ^ The TMBDb API Key
+                     -> MonadGlugIO String MovieDetails
                      -- ^ Either an error message or movie details
-getDetailsOfMovie i k = fmap fst . execMonadGlugIO $ do
+getDetailsOfMovie i k = do
     bsl <- realTlsGetM $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
     id_ <- dec' bsl >>= getMovie >>= lookupInt "id"
     bsl' <- realTlsGetM $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k

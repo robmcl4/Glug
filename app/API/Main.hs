@@ -40,7 +40,7 @@ app :: MVar (LRU String B.ByteString) -> Application
 app mvr req respond = case pathInfo req of
                     ["titles",_] -> serveTitles mvr req >>= respond
                     ["words",_]  -> serveSubs mvr req >>= respond
-                    ["title",_] -> serveTitleDetails req >>= respond
+                    ["title",_] -> serveTitleDetails mvr req >>= respond
                     _ -> respond show404
 
 
@@ -106,14 +106,14 @@ serveSubs cache req = if requestMethod req /= methodGet
         maybeI b = eToM (Enc.decodeUtf8' (B.toStrict b)) >>= eToM . readEither . T.unpack
 
 
-serveTitleDetails :: Request -> IO Response
-serveTitleDetails req = if requestMethod req /= methodGet
+serveTitleDetails :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveTitleDetails cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
           [_, url] -> if not . isImdbId $ url
                 then return show404
                 else do
-                  id_ <- getTitleDetails . T.unpack $ url
+                  id_ <- fmap fst . G.execMonadGlugIOWithCache cache $ getTitleDetails . T.unpack $ url
                   case id_ of
                     Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                     Right x -> return . responseLBS status200 hdrJson . encode $ x

@@ -14,6 +14,9 @@ module Glug (
 , execMonadGlugIOWithCache
 , getSubtitles
 , getDetailsOfMovie
+, hoistEither
+, hoistMaybe
+, liftIO
 , throwError
 ) where
 

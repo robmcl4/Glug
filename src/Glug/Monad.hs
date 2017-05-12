@@ -10,6 +10,7 @@ module Glug.Monad (
 , execMonadGlugIOWithCache
 , hoistEither
 , hoistMaybe
+, liftIO
 , logM
 , realTlsGetM
 , throwError

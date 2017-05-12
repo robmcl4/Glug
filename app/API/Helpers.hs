@@ -69,12 +69,11 @@ getBestWords refsz rng = case fromBase64 refsz of
                              }
 
 
-getTitleDetails :: String -> IO (Either String G.MovieDetails)
+getTitleDetails :: String -> G.MonadGlugIO String G.MovieDetails
 getTitleDetails i = do
-    key <- getTMDbKey
-    case key of
-      Nothing -> return . Left $ "The Movie Database env variable not set"
-      Just k  -> G.getDetailsOfMovie i k
+    maybeKey <- G.liftIO $ getTMDbKey
+    key <- G.hoistMaybe "The Movie Database env variable not set" maybeKey
+    G.getDetailsOfMovie i key
 
 
 isSubLink :: String -> Bool
