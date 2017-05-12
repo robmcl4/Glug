@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 
 
 module Glug.TMDbDownloader (
@@ -16,7 +15,7 @@ import Control.Monad.Except
 import Data.Aeson
 
 import Glug.Types (MovieDetails (..), IMDbId, ApiKey)
-import Glug.Monad (execMonadGlugIO, HttpGetM)
+import Glug.Monad (execMonadGlugIO, realTlsGetM)
 
 
 tmdbBase :: String
@@ -27,15 +26,13 @@ tmdbBase = "https://api.themoviedb.org/3/"
 getDetailsOfMovie :: IMDbId
                      -- ^ The IMDb ID
                      -> ApiKey
-                     -- ^ The Api key for The Movie Database
-                     -> HttpGetM
                      -- ^ A (stubbable) function for getting HTTP requests
                      -> IO (Either String MovieDetails)
                      -- ^ Either an error message or movie details
-getDetailsOfMovie i k f = fmap fst . execMonadGlugIO $ do
-    bsl <- f $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
+getDetailsOfMovie i k = fmap fst . execMonadGlugIO $ do
+    bsl <- realTlsGetM $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
     id_ <- dec' bsl >>= getMovie >>= lookupInt "id"
-    bsl' <- f $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k
+    bsl' <- realTlsGetM $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k
     obj <- dec' bsl'
     post_path <- lookupText "poster_path" obj
     mov_len <- (60 *) <$> lookupInt "runtime" obj

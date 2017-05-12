@@ -21,7 +21,6 @@ import GHC.Generics
 
 
 import qualified Glug as G
-import qualified Glug.Monad as GM
 
 
 data TitleLink = TitleLink { ref   :: T.Text
@@ -45,8 +44,8 @@ data RankedWord = RankedWord { word :: T.Text
 instance ToJSON RankedWord
 
 
-getTitles :: String -> IO (Either String [TitleLink])
-getTitles s = fmap (map mkTitleLink) <$> G.candidateTitles s
+getTitles :: String -> G.MonadGlugIO String [TitleLink]
+getTitles s = map mkTitleLink <$> G.candidateTitles s
   where mkTitleLink (a, b, c) = TitleLink { ref = toBase64 a, title = b, subs = c }
 
 
@@ -76,7 +75,7 @@ getTitleDetails i = do
     key <- getTMDbKey
     case key of
       Nothing -> return . Left $ "The Movie Database env variable not set"
-      Just k  -> G.getDetailsOfMovie i k GM.realTlsGetM
+      Just k  -> G.getDetailsOfMovie i k
 
 
 isSubLink :: String -> Bool

@@ -28,7 +28,7 @@ main = (runMaybeT $ do
 getCandidateTitles :: MaybeIO [(T.Text, T.Text, Integer)]
 getCandidateTitles = do
     mov <- prompt "Enter movie title: "
-    titles <- liftIO $ candidateTitles mov
+    titles <- liftIO . fmap fst . execMonadGlugIO $ candidateTitles mov
     case titles of
         Left s -> putStrLn' $ "Could not find title (" ++ s ++ ")"
         Right s -> if null s

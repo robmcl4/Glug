@@ -53,10 +53,10 @@ getSubtitles s = fmap fst . execMonadGlugIO $ do
 -- | Gets candidate titles from a movie after searching by title
 candidateTitles :: String
                    -- ^ The movie title being searched
-                   -> IO (Either String [(T.Text, T.Text, Integer)])
-                   -- ^ Either an error message or a list of
+                   -> MonadGlugIO String [(T.Text, T.Text, Integer)]
+                   -- ^ represents either an error message or a list of
                    --   (href, title, no. of subs)
-candidateTitles s = fmap fst . execMonadGlugIO $ do
+candidateTitles s = do
     soup <- getSoup $ searchurl ++ quotePlus s
     titles <- hoistEither $ getTitles soup
     return . sortOn (\(_, t, _) -> editDist (T.unpack t)) . dedup $ titles

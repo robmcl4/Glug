@@ -1,5 +1,6 @@
 module Glug (
-  MovieDetails (..)
+  MonadGlugIO (..)
+, MovieDetails (..)
 , MovieSubtitles (..)
 , WordCount (..)
 , WordRank (..)
@@ -9,6 +10,8 @@ module Glug (
 , countWords
 , bestCandidates
 , candidateTitles
+, execMonadGlugIO
+, execMonadGlugIOWithCache
 , getSubtitles
 , getDetailsOfMovie
 ) where
@@ -18,3 +21,4 @@ import Glug.WordCounter
 import Glug.WordHeuristics
 import Glug.SubsceneDownloader
 import Glug.TMDbDownloader
+import Glug.Monad

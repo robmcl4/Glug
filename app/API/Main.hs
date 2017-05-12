@@ -8,8 +8,11 @@ module API.Main (
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as Enc
+import qualified Glug as G
 
+import Control.Concurrent.MVar
 import Data.Aeson (encode, ToJSON)
+import Data.Cache.LRU
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock
@@ -27,12 +30,15 @@ import API.Helpers
 
 
 main :: IO ()
-main = getSettings >>= \settings -> runSettings settings app
+main = do
+    settings <- getSettings
+    mvr <- newMVar . newLRU $ Just 128
+    runSettings settings $ app mvr
 
 
-app :: Application
-app req respond = case pathInfo req of
-                    ["titles",_] -> serveTitles req >>= respond
+app :: MVar (LRU String B.ByteString) -> Application
+app mvr req respond = case pathInfo req of
+                    ["titles",_] -> serveTitles mvr req >>= respond
                     ["words",_]  -> serveSubs req >>= respond
                     ["title",_] -> serveTitleDetails req >>= respond
                     _ -> respond show404
@@ -72,12 +78,12 @@ logReq req _ _ = t >>= (\t' -> putStrLn $ t' ++ " :: " ++ method ++ " " ++ path 
 
 -- ---------------------------- Request Handlers ---------------------------- --
 
-serveTitles :: Request -> IO Response
-serveTitles req = if requestMethod req /= methodGet
+serveTitles :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveTitles cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
              [_, title] -> do
-                 ttls <- getTitles . T.unpack $ title
+                 ttls <- fmap fst . G.execMonadGlugIOWithCache cache $ getTitles . T.unpack $ title
                  case ttls of
                      Left s -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                      Right x -> return . responseLBS status200 hdrJson . encode $ x
