@@ -32,7 +32,7 @@ import API.Helpers
 main :: IO ()
 main = do
     settings <- getSettings
-    mvr <- newMVar . newLRU $ Just 128
+    mvr <- newMVar . newLRU $ Just cacheSize
     runSettings settings $ app mvr
 
 
@@ -57,6 +57,11 @@ port :: IO Integer
 port = do
           portMayStr <- lookupEnv "PORT"
           return . fromMaybe 3000 $ portMayStr >>= readMaybe
+
+
+-- | The max number of items in the cache
+cacheSize :: Integer
+cacheSize = 256
 
 
 beforeMainLoop :: IO ()
