@@ -16,9 +16,9 @@ import Glug.Types (Cache)
 
 
 -- | Reads the cache for a URL's content. If not found, issues a real request
-tlsGetUrl :: String ->
+tlsGetUrl :: String
               -- ^ The URL to retrieve
-              MonadGlugIO String BSL.ByteString
+              -> MonadGlugIO String BSL.ByteString
               -- ^ Either the result or an error
 tlsGetUrl url = do
     lru <- _takeLru
