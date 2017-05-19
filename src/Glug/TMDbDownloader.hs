@@ -15,7 +15,8 @@ import Control.Monad.Except
 import Data.Aeson
 
 import Glug.Types (MovieDetails (..), IMDbId, ApiKey)
-import Glug.Monad (MonadGlugIO (..), realTlsGetM)
+import Glug.Monad (MonadGlugIO (..))
+import Glug.Cache (tlsGetUrl)
 
 
 tmdbBase :: String
@@ -30,9 +31,9 @@ getDetailsOfMovie :: IMDbId
                      -> MonadGlugIO String MovieDetails
                      -- ^ Either an error message or movie details
 getDetailsOfMovie i k = do
-    bsl <- realTlsGetM $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
+    bsl <- tlsGetUrl $ tmdbBase ++ "find/" ++ i ++ "?external_source=imdb_id&api_key=" ++ k
     id_ <- dec' bsl >>= getMovie >>= lookupInt "id"
-    bsl' <- realTlsGetM $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k
+    bsl' <- tlsGetUrl $ tmdbBase ++ "movie/" ++ show id_ ++ "?api_key=" ++ k
     obj <- dec' bsl'
     post_path <- lookupText "poster_path" obj
     mov_len <- (60 *) <$> lookupInt "runtime" obj

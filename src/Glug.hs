@@ -1,5 +1,6 @@
 module Glug (
-  MonadGlugIO (..)
+  Cache
+, MonadGlugIO (..)
 , MovieDetails (..)
 , MovieSubtitles (..)
 , WordCount (..)
@@ -17,6 +18,7 @@ module Glug (
 , hoistEither
 , hoistMaybe
 , liftIO
+, newCache
 , throwError
 ) where
 

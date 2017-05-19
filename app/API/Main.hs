@@ -10,9 +10,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as Enc
 import qualified Glug as G
 
-import Control.Concurrent.MVar
 import Data.Aeson (encode, ToJSON)
-import Data.Cache.LRU
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock
@@ -27,20 +25,21 @@ import Text.Read (readEither, readMaybe)
 
 
 import API.Helpers
+import Glug (Cache, newCache)
 
 
 main :: IO ()
 main = do
     settings <- getSettings
-    mvr <- newMVar . newLRU $ Just cacheSize
-    runSettings settings $ app mvr
+    cache <- newCache cacheSize
+    runSettings settings $ app cache
 
 
-app :: MVar (LRU String B.ByteString) -> Application
-app mvr req respond = case pathInfo req of
-                    ["titles",_] -> serveTitles mvr req >>= respond
-                    ["words",_]  -> serveSubs mvr req >>= respond
-                    ["title",_] -> serveTitleDetails mvr req >>= respond
+app :: Cache -> Application
+app cache req respond = case pathInfo req of
+                    ["titles",_] -> serveTitles cache req >>= respond
+                    ["words",_]  -> serveSubs cache req >>= respond
+                    ["title",_] -> serveTitleDetails cache req >>= respond
                     _ -> respond show404
 
 
@@ -83,7 +82,7 @@ logReq req _ _ = t >>= (\t' -> putStrLn $ t' ++ " :: " ++ method ++ " " ++ path 
 
 -- ---------------------------- Request Handlers ---------------------------- --
 
-serveTitles :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveTitles :: Cache -> Request -> IO Response
 serveTitles cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
@@ -95,7 +94,7 @@ serveTitles cache req = if requestMethod req /= methodGet
              _            -> return show404
 
 
-serveSubs :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveSubs :: Cache -> Request -> IO Response
 serveSubs cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
@@ -111,7 +110,7 @@ serveSubs cache req = if requestMethod req /= methodGet
         maybeI b = eToM (Enc.decodeUtf8' (B.toStrict b)) >>= eToM . readEither . T.unpack
 
 
-serveTitleDetails :: MVar (LRU String B.ByteString) -> Request -> IO Response
+serveTitleDetails :: Cache -> Request -> IO Response
 serveTitleDetails cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of

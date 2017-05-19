@@ -16,14 +16,15 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Glug
+                     , Glug.Cache
                      , Glug.Monad
                      , Glug.SrtExtract
-                     , Glug.WordCounter
-                     , Glug.WordTrie
-                     , Glug.WordHeuristics
                      , Glug.SubsceneDownloader
                      , Glug.TMDbDownloader
                      , Glug.Types
+                     , Glug.WordCounter
+                     , Glug.WordTrie
+                     , Glug.WordHeuristics
   other-modules:       Glug.Constants
                      , Paths_glug
   build-depends:       aeson                >= 1.0 && < 1.1
@@ -79,6 +80,7 @@ test-suite glug-test
                      , bytestring        >= 0.10.6 && < 0.11
                      , glug
                      , hspec             >= 2.4 && < 2.5
+                     , lrucache             >= 1.2 && < 1.3
                      , subtitleParser    >= 0.5 && < 0.6
                      , time              >= 1.6 && <1.7
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N

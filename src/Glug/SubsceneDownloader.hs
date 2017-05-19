@@ -18,10 +18,10 @@ import Data.List (group, sort, sortOn)
 import Network.HTTP.Base (urlEncode)
 import Text.Read (readEither)
 
-import Glug.Monad (MonadGlugIO (..), realTlsGetM, hoistEither)
+import Glug.Monad (MonadGlugIO (..), hoistEither)
 import Glug.SrtExtract (parseSrtFromZip)
 import Glug.Types (MovieSubtitles (..))
-
+import Glug.Cache (tlsGetUrl)
 
 searchurl :: String
 subscenebase :: String
@@ -44,7 +44,7 @@ getSubtitles s = do
         subAt subpath = do
             soup <- getSoup $ subscenebase ++ subpath
             downLink <- hoistEither $ getDownloadLink soup
-            subs <- realTlsGetM (subscenebase ++ T.unpack downLink)
+            subs <- tlsGetUrl (subscenebase ++ T.unpack downLink)
             parseSrtFromZip subs
         extractId t = fromMaybe (T.stripPrefix "http://www.imdb.com/title/tt" t) "did not find valid imdb id"
         pad = Right . T.justifyRight 7 '0'
@@ -66,7 +66,7 @@ candidateTitles s = do
 
 getSoup :: String -> MonadGlugIO String [TS.Tag T.Text]
 getSoup url = do
-    bs <- realTlsGetM url
+    bs <- tlsGetUrl url
     txt <- hoistEither . eitherShow . T.decodeUtf8' $ bs
     return . TS.parseTags $ txt
 
