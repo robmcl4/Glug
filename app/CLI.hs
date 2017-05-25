@@ -27,8 +27,9 @@ main = (runMaybeT $ do
 
 getCandidateTitles :: MaybeIO [(T.Text, T.Text, Integer)]
 getCandidateTitles = do
+    let cache = newCache 256
     mov <- prompt "Enter movie title: "
-    titles <- liftIO . fmap fst . execMonadGlugIO $ candidateTitles mov
+    titles <- liftIO . fmap fst . execMonadGlugIO cache $ candidateTitles mov
     case titles of
         Left s -> putStrLn' $ "Could not find title (" ++ s ++ ")"
         Right s -> if null s
@@ -57,7 +58,8 @@ chooseTitle bs = do
 
 getSubs :: T.Text -> MaybeIO [Subtitle]
 getSubs slnk = do
-    subs <- liftIO $ fmap fst . execMonadGlugIO . getSubtitles $ T.unpack slnk
+    let cache = newCache 256
+    subs <- liftIO $ fmap fst . execMonadGlugIO cache . getSubtitles $ T.unpack slnk
     case liftM (subtitles) subs of
       Left s -> putStrLn' $ "Could not find .srt: " ++ s
       Right s -> return s

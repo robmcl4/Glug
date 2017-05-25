@@ -1,86 +1,94 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module Glug.Cache (
-  tlsGetUrl
-, serializeCache
-, loadCache
+  Cache ()
+, newCache
+, mergeCache
+, insertHardCache
+, tlsGetUrl
 ) where
 
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Cache.LRU as LRU
+import qualified Data.Map.Strict as Map
 
-import Control.Concurrent.MVar
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, ask)
+import Control.Monad (mplus)
+import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Except (MonadError)
-import Data.Serialize
+import Control.Monad.State.Class (MonadState, get, put)
+import System.Random (StdGen, mkStdGen, next)
 
-import Glug.Constants (defaultLRUSize)
 import Glug.Net (realTlsGetUrl)
-import Glug.Monad
-import Glug.Types (Cache)
+
+
+-- | A random-eviction cache
+data Cache = Cache { kvStore :: Map.Map String BSL.ByteString
+                   , randomGen :: StdGen
+                   , maxCapacity :: Int
+                   , auxKvStore :: Map.Map String BSL.ByteString
+                   } deriving (Show)
+
+
+-- | Makes a new cache from the given max capacity
+newCache :: Int
+            -- ^ Max capacity, nonpositive values are rounded up to 1
+            -> Cache
+            -- ^ The cache
+newCache cap = Cache { kvStore = Map.empty
+                     , randomGen = mkStdGen 179089975 -- TODO make this a param or system IO input?
+                     , maxCapacity = max cap 1
+                     , auxKvStore = Map.empty }
+
+
+-- | Merges two maps together. Randomly evicts from source as dest is filled.
+mergeCache :: Cache
+              -- ^ the destination cache
+              -> Cache
+              -- ^ the source cache
+              -> Cache
+              -- ^ result
+mergeCache c1 c2 = Map.foldrWithKey insertHardCache c1 $ auxKvStore c2
+
+
+-- | Inserts a key-value pair into the short-term cache
+insertSoftCache :: String -> BSL.ByteString -> Cache -> Cache
+insertSoftCache k v c = c { auxKvStore = Map.insert k v (auxKvStore c) }
+
+
+-- | Inserts a key-value pair into the long-term cache, evicting if necessary
+insertHardCache :: String -> BSL.ByteString -> Cache -> Cache
+insertHardCache k v c = if (Map.size . kvStore $ c) >= (maxCapacity c)
+                          then insertHardCache k v . evictFromCache $ c
+                          else c { kvStore = Map.insert k v (kvStore c) }
+
+
+-- | Evicts one element from the given cache
+evictFromCache :: Cache -> Cache
+evictFromCache c = if Map.null kv
+                     then c
+                     else c { kvStore = kv', randomGen = gen' }
+    where kv = kvStore c
+          (i, gen') = next . randomGen $ c
+          idx = i `mod` (Map.size kv)
+          kv' = Map.deleteAt idx kv
+
+
+-- | Look up a value in the cache
+lookupCache :: String -> Cache -> Maybe BSL.ByteString
+lookupCache s c = (Map.lookup s . auxKvStore $ c) `mplus` (Map.lookup s . kvStore $ c)
 
 
 -- | Reads the cache for a URL's content. If not found, issues a real request
-tlsGetUrl :: String
-              -- ^ The URL to retrieve
-              -> MonadGlugIO String BSL.ByteString
-              -- ^ Either the result or an error
-tlsGetUrl url = do
-    lru <- _takeLru
-    case LRU.lookup url lru of
-      (lru', Just x)  -> do
-        -- cache hit
-        _putLru lru'
-        return x
-      (lru', Nothing) -> do
-        -- cache miss
-        _putLru lru'
-        val <- realTlsGetUrl url
-        _modifyLru' $ LRU.insert url val
-        return val
-
-
-_readLru :: (MonadIO m, MonadReader Cache m) => m (LRU.LRU String BSL.ByteString)
-_readLru = ask >>= liftIO . readMVar
-
-
-_takeLru :: (MonadIO m, MonadReader Cache m) => m (LRU.LRU String BSL.ByteString)
-_takeLru = ask >>= liftIO . takeMVar
-
-
-_putLru :: (MonadIO m, MonadReader Cache m) => LRU.LRU String BSL.ByteString -> m ()
-_putLru lru = ask >>= \mvar -> liftIO $ putMVar mvar lru
-
-
-_modifyLru' :: (MonadIO m, MonadReader Cache m) =>
-        (LRU.LRU String BSL.ByteString -> LRU.LRU String BSL.ByteString)
-        -> m ()
-_modifyLru' f = _takeLru >>= return . f >>= _putLru
-
-
--- Serialized Cache Methods ----------------------------------------------------
-
--- | Serialize the internal cache state
-serializeCache :: (MonadIO m, MonadReader Cache m) => m BSL.ByteString
-serializeCache = encodeLru <$> _readLru
-
-
--- | Load internal cache from serialized state.
-loadCache :: (MonadError String m, MonadIO m, MonadReader Cache m) => BSL.ByteString -> m ()
-loadCache bsl = do
-    -- the cache should NOT be held before invoking!
-    decoded <- hoistEither . decodeLru $ bsl
-    mvr <- ask
-    _ <- liftIO $ swapMVar mvr decoded
-    return ()
-
-
--- | Serialize an LRU cache
-encodeLru :: LRU.LRU String BSL.ByteString -> BSL.ByteString
-encodeLru = encodeLazy . LRU.toList
-
-
--- | Deserialize an LRU cache
-decodeLru :: BSL.ByteString -> Either String (LRU.LRU String BSL.ByteString)
-decodeLru = fmap (LRU.fromList (Just defaultLRUSize)) . decodeLazy
+tlsGetUrl :: (MonadError String m, MonadIO m, MonadState Cache m) =>
+                  String
+                  -- ^ the URL to request
+                  -> m BSL.ByteString
+                  -- ^ the response (cache is modified)
+tlsGetUrl url = get >>= \cache -> case lookupCache url cache of
+                                    Just x  -> do
+                                      -- cache hit
+                                      return x
+                                    Nothing -> do
+                                      -- cache miss
+                                      val <- realTlsGetUrl url
+                                      put $ insertSoftCache url val cache
+                                      return val

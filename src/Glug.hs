@@ -12,14 +12,11 @@ module Glug (
 , bestCandidates
 , candidateTitles
 , execMonadGlugIO
-, execMonadGlugIOWithCache
 , getSubtitles
 , getDetailsOfMovie
 , hoistEither
 , hoistMaybe
-, liftIO
 , newCache
-, throwError
 ) where
 
 import Glug.Types
@@ -28,3 +25,4 @@ import Glug.WordHeuristics
 import Glug.SubsceneDownloader
 import Glug.TMDbDownloader
 import Glug.Monad
+import Glug.Cache

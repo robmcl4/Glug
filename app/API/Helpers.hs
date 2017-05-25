@@ -15,6 +15,8 @@ import qualified Data.Text as TS
 import qualified System.Environment as ENV
 
 
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Error.Class (throwError)
 import Data.Aeson
 import Data.Char (isDigit)
 import Data.List (isPrefixOf)
@@ -52,9 +54,9 @@ getTitles s = map mkTitleLink <$> G.candidateTitles s
 
 getBestWords :: String -> (Integer, Integer) -> G.MonadGlugIO String MovieSummary
 getBestWords refsz rng = case fromBase64 refsz of
-        Left  s   -> G.throwError s
+        Left  s   -> throwError s
         Right url -> if not $ isSubLink url
-            then G.throwError "not subscene url"
+            then throwError "not subscene url"
             else do
               mov <- G.getSubtitles url
               let wcs = G.countWords . G.subtitles $ mov
@@ -71,7 +73,7 @@ getBestWords refsz rng = case fromBase64 refsz of
 
 getTitleDetails :: String -> G.MonadGlugIO String G.MovieDetails
 getTitleDetails i = do
-    maybeKey <- G.liftIO $ getTMDbKey
+    maybeKey <- liftIO $ getTMDbKey
     key <- G.hoistMaybe "The Movie Database env variable not set" maybeKey
     G.getDetailsOfMovie i key
 

@@ -9,18 +9,11 @@ module Glug.Types (
 , WordCount (..)
 , WordRank (..)
 , Subtitle (..)
-, Cache
-, newCache
 ) where
 
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Time.Clock as C
-import qualified Data.Cache.LRU as LRU
-import qualified Data.ByteString.Lazy as BSL
-
-import Control.Concurrent.MVar
-import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import Data.Aeson
 import Data.Int (Int32)
@@ -77,11 +70,3 @@ data WordRank = WordRank {
       } deriving (Show, Eq)
 instance Ord WordRank where
   compare w1 w2 = compare (heuristic w1) (heuristic w2)
-
-
--- | A cache of external network requests
-type Cache = MVar (LRU.LRU String BSL.ByteString)
-
--- | Constructs a new Cache from the supplied max capacity of items
-newCache :: MonadIO m => Integer -> m Cache
-newCache = liftIO . newMVar . LRU.newLRU . Just

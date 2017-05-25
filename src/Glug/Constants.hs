@@ -3,7 +3,6 @@
 module Glug.Constants (
   version
 , useragent
-, defaultLRUSize
 ) where
 
 import qualified Paths_glug as P
@@ -18,6 +17,3 @@ version = T.pack . showVersion $ P.version
 
 useragent :: BS.ByteString
 useragent = BS.concat ["haskell/glug " :: BS.ByteString, ENC.encodeUtf8 version]
-
-defaultLRUSize :: Integer
-defaultLRUSize = 256

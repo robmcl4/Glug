@@ -30,8 +30,8 @@ import Glug (Cache, newCache)
 
 main :: IO ()
 main = do
+    let cache = newCache cacheSize
     settings <- getSettings
-    cache <- newCache cacheSize
     runSettings settings $ app cache
 
 
@@ -59,7 +59,7 @@ port = do
 
 
 -- | The max number of items in the cache
-cacheSize :: Integer
+cacheSize :: Int
 cacheSize = 256
 
 
@@ -87,7 +87,7 @@ serveTitles cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
              [_, title] -> do
-                 ttls <- fmap fst . G.execMonadGlugIOWithCache cache $ getTitles . T.unpack $ title
+                 ttls <- fmap fst . G.execMonadGlugIO cache $ getTitles . T.unpack $ title
                  case ttls of
                      Left s -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                      Right x -> return . responseLBS status200 hdrJson . encode $ x
@@ -99,7 +99,7 @@ serveSubs cache req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
             [_, ref] -> do
-              best <- fmap fst . G.execMonadGlugIOWithCache cache $ getBestWords (T.unpack ref) rng
+              best <- fmap fst . G.execMonadGlugIO cache $ getBestWords (T.unpack ref) rng
               case best of
                 Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                 Right x -> return . responseLBS status200 hdrJson . encode $ x
@@ -117,7 +117,7 @@ serveTitleDetails cache req = if requestMethod req /= methodGet
           [_, url] -> if not . isImdbId $ url
                 then return show404
                 else do
-                  id_ <- fmap fst . G.execMonadGlugIOWithCache cache $ getTitleDetails . T.unpack $ url
+                  id_ <- fmap fst . G.execMonadGlugIO cache $ getTitleDetails . T.unpack $ url
                   case id_ of
                     Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                     Right x -> return . responseLBS status200 hdrJson . encode $ x
