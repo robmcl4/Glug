@@ -16,6 +16,7 @@ module Glug (
 , getDetailsOfMovie
 , hoistEither
 , hoistMaybe
+, mergeCache
 , newCache
 ) where
 

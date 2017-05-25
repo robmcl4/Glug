@@ -48,7 +48,9 @@ instance ToJSON RankedWord
 
 
 getTitles :: String -> G.MonadGlugIO String [TitleLink]
-getTitles s = map mkTitleLink <$> G.candidateTitles s
+getTitles s = do
+    result <- map mkTitleLink <$> G.candidateTitles s
+    return result
   where mkTitleLink (a, b, c) = TitleLink { ref = toBase64 a, title = b, subs = c }
 
 

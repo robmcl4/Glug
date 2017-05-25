@@ -10,6 +10,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as Enc
 import qualified Glug as G
 
+import Control.Concurrent.MVar
+import Control.Concurrent.Chan
 import Data.Aeson (encode, ToJSON)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
@@ -25,21 +27,27 @@ import Text.Read (readEither, readMaybe)
 
 
 import API.Helpers
+import API.CacheMaintenance
 import Glug (Cache, newCache)
 
 
 main :: IO ()
 main = do
     let cache = newCache cacheSize
+    mvar <- newMVar cache
+    chan <- newChan
+    maintainCache chan mvar
     settings <- getSettings
-    runSettings settings $ app cache
+    runSettings settings $ app mvar chan
 
 
-app :: Cache -> Application
-app cache req respond = case pathInfo req of
-                    ["titles",_] -> serveTitles cache req >>= respond
-                    ["words",_]  -> serveSubs cache req >>= respond
-                    ["title",_] -> serveTitleDetails cache req >>= respond
+app :: MVar Cache -> Chan Cache -> Application
+app mvar chan req respond = do
+                cache <- readMVar mvar
+                case pathInfo req of
+                    ["titles",_] -> serveTitles cache chan req >>= respond
+                    ["words",_]  -> serveSubs cache chan req >>= respond
+                    ["title",_] -> serveTitleDetails cache chan req >>= respond
                     _ -> respond show404
 
 
@@ -82,24 +90,26 @@ logReq req _ _ = t >>= (\t' -> putStrLn $ t' ++ " :: " ++ method ++ " " ++ path 
 
 -- ---------------------------- Request Handlers ---------------------------- --
 
-serveTitles :: Cache -> Request -> IO Response
-serveTitles cache req = if requestMethod req /= methodGet
+serveTitles :: Cache -> Chan Cache -> Request -> IO Response
+serveTitles cache chan req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
              [_, title] -> do
-                 ttls <- fmap fst . G.execMonadGlugIO cache $ getTitles . T.unpack $ title
+                 (ttls, cache') <- G.execMonadGlugIO cache $ getTitles . T.unpack $ title
+                 writeChan chan cache'
                  case ttls of
                      Left s -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                      Right x -> return . responseLBS status200 hdrJson . encode $ x
              _            -> return show404
 
 
-serveSubs :: Cache -> Request -> IO Response
-serveSubs cache req = if requestMethod req /= methodGet
+serveSubs :: Cache -> Chan Cache -> Request -> IO Response
+serveSubs cache chan req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
             [_, ref] -> do
-              best <- fmap fst . G.execMonadGlugIO cache $ getBestWords (T.unpack ref) rng
+              (best, cache') <- G.execMonadGlugIO cache $ getBestWords (T.unpack ref) rng
+              writeChan chan cache'
               case best of
                 Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                 Right x -> return . responseLBS status200 hdrJson . encode $ x
@@ -110,18 +120,19 @@ serveSubs cache req = if requestMethod req /= methodGet
         maybeI b = eToM (Enc.decodeUtf8' (B.toStrict b)) >>= eToM . readEither . T.unpack
 
 
-serveTitleDetails :: Cache -> Request -> IO Response
-serveTitleDetails cache req = if requestMethod req /= methodGet
+serveTitleDetails :: Cache -> Chan Cache -> Request -> IO Response
+serveTitleDetails cache chan req = if requestMethod req /= methodGet
     then return show404
     else case pathInfo req of
           [_, url] -> if not . isImdbId $ url
                 then return show404
                 else do
-                  id_ <- fmap fst . G.execMonadGlugIO cache $ getTitleDetails . T.unpack $ url
+                  (id_, cache') <- G.execMonadGlugIO cache $ getTitleDetails . T.unpack $ url
+                  writeChan chan cache'
                   case id_ of
                     Left s  -> return $ responseLBS status500 hdrJson (errMsg . T.pack $ s)
                     Right x -> return . responseLBS status200 hdrJson . encode $ x
-          _          -> return show404
+          _        -> return show404
 
 
 show404 :: Response
