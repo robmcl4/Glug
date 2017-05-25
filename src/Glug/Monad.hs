@@ -27,7 +27,7 @@ import Control.Monad.Writer.Lazy
 import Data.Time.Clock
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
-import Glug.Constants (useragent)
+import Glug.Constants (useragent, defaultLRUSize)
 import Glug.Types (Cache, newCache)
 
 -- -------------------------------- MonadGlugIO --------------------------------
@@ -57,7 +57,7 @@ instance MonadReader Cache (MonadGlugIO e) where
 -- | Run MonadGlugIO and reduce to Either for a result and a message log
 execMonadGlugIO :: MonadGlugIO e a -> IO (Either e a, [String])
 execMonadGlugIO mgio = do
-    cache <- newCache 64
+    cache <- newCache defaultLRUSize
     execMonadGlugIOWithCache cache mgio
 
 
