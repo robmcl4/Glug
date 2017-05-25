@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 
 module Glug.Monad (
@@ -12,13 +12,9 @@ module Glug.Monad (
 , hoistMaybe
 , liftIO
 , logM
-, realTlsGetUrl
 , throwError
 ) where
 
-
-import qualified Data.ByteString.Lazy as BSL
-import qualified Network.HTTP.Conduit as C
 
 import Control.Monad.Except
 import Control.Monad.Reader as R
@@ -27,7 +23,7 @@ import Control.Monad.Writer.Lazy
 import Data.Time.Clock
 import Data.Time.Format (formatTime, defaultTimeLocale)
 
-import Glug.Constants (useragent, defaultLRUSize)
+import Glug.Constants (defaultLRUSize)
 import Glug.Types (Cache, newCache)
 
 -- -------------------------------- MonadGlugIO --------------------------------
@@ -84,18 +80,7 @@ hoistMaybe e Nothing  = throwError e
 
 
 -- | Log a message with a module tag, also embeds timestamp
-logM :: String -> String -> MonadGlugIO a ()
+logM :: (MonadWriter [String] m, MonadIO m) => String -> String -> m ()
 logM tag msg = do
     t <- liftIO $ formatTime defaultTimeLocale "%FT%X" <$> getCurrentTime
     tell [t ++ " [" ++ tag ++ "] " ++ msg]
-
-
--- ------------------------------ Network Requests -----------------------------
-
-realTlsGetUrl :: String -> MonadGlugIO String BSL.ByteString
-realTlsGetUrl url = do
-    logM "realTlsGetUrl" $ "getting URL " ++ url
-    initReq <- hoistMaybe "could not parse url" . C.parseRequest $ url
-    mgr <- liftIO $ C.newManager C.tlsManagerSettings
-    let req = initReq { C.requestHeaders = [("User-Agent", useragent)] }
-    C.responseBody <$> C.httpLbs req mgr

@@ -16,6 +16,7 @@ import Control.Monad.Except (MonadError)
 import Data.Serialize
 
 import Glug.Constants (defaultLRUSize)
+import Glug.Net (realTlsGetUrl)
 import Glug.Monad
 import Glug.Types (Cache)
 

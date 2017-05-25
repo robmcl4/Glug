@@ -18,6 +18,7 @@ library
   exposed-modules:     Glug
                      , Glug.Cache
                      , Glug.Monad
+                     , Glug.Net
                      , Glug.SrtExtract
                      , Glug.SubsceneDownloader
                      , Glug.TMDbDownloader
