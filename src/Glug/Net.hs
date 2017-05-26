@@ -23,6 +23,7 @@ realTlsGetUrl :: (MonadError String m, MonadIO m) =>
                   -> m BSL.ByteString
                   -- ^ the response
 realTlsGetUrl url = do
+              liftIO . putStrLn $ "Getting URL " ++ url
               req <- parseRequest url
               mgr <- liftIO $ C.newManager C.tlsManagerSettings
               let req' = req { C.requestHeaders = [("User-Agent", useragent)] }
@@ -31,6 +32,7 @@ realTlsGetUrl url = do
                 -- rate limited, pause and retry
                 -- TODO make this a more sane strategy
                 then do
+                    liftIO $ putStrLn "RATE LIMITED: delaying and retrying"
                     liftIO $ threadDelay 100 -- pause 100ms
                     realTlsGetUrl url
                 -- response available

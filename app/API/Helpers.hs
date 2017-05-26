@@ -67,7 +67,7 @@ getBestWords refsz rng = case fromBase64 refsz of
               return MovieSummary { imdbid = G.imdbid mov
                                   , ranked_words = best
                                   , runtime = rt
-                                  , first_subtitles = take 10 . G.subtitles $ mov }
+                                  , first_subtitles = take 25 . G.subtitles $ mov }
   where toRW wr = RankedWord { word = T.fromStrict . G.text . G.wordcount $ wr
                              , occurrences = map (round . toRational) . G.occurrences . G.wordcount $ wr
                              }
