@@ -6,11 +6,11 @@ where
 
 import qualified Data.Text as T
 import qualified Glug.Types as WC (WordCount (..))
-import qualified Glug.WordTrie as WT (commonWords, containsStr)
 import Data.Int (Int32)
 import Data.List (sortBy)
 
 import Glug.Types (WordRank (..))
+import Glug.CommonWords (commonality)
 
 
 -- | Gets the best candidates from a list of words, sorted best first
@@ -26,24 +26,28 @@ dropWordsByFrequency wcs (min_, max_) = filter (between . toInteger . WC.freq) w
     where between x = x >= min_ && x <= max_
 
 
+-- NOTE higher heuristic is better fitness
+
+
 addIsCommon :: [WordRank] -> [WordRank]
-addIsCommon = addToHeuristic $ \wc -> if isCommon $ WC.text wc then 0 else 5
-    where isCommon = WT.containsStr WT.commonWords . T.unpack
+addIsCommon = addToHeuristic $ \wc -> fromIntegral $ 5 - (commonality $ WC.text wc) * 5 `div` 1000
 
 
 addSyllable :: [WordRank] -> [WordRank]
-addSyllable = addToHeuristic $ fromIntegral . div 3 . T.length . WC.text
+addSyllable = addToHeuristic $ \wc -> fromIntegral $ (T.length $ WC.text wc) `div` 3
 
 
 addTimeGap :: [WordRank] -> [WordRank]
 addTimeGap wrs = addToHeuristic timegap wrs
-    where timegap wc = round $ mingap wc / expected wc * 10
-          expected = (toRational maxtime /) . fromIntegral . WC.freq
-          mingap = minimum . difflist . map toRational . WC.occurrences
+    where weight = 5
+          timegap wc = round $ (mingap wc) / (expected wc) * weight
+          expected wc = maxtime /  (fromIntegral $ WC.freq wc)
+          -- TODO make this safe for words that appear only once (?)
+          mingap = toRational . minimum . difflist . WC.occurrences
           difflist [] = []
           difflist [_] = []
           difflist (x:y:xs) = (y - x) : difflist (y:xs)
-          maxtime = maximum . concatMap (WC.occurrences . wordcount) $ wrs
+          maxtime = toRational . maximum . concatMap (WC.occurrences . wordcount) $ wrs
 
 
 addToHeuristic :: (WC.WordCount -> Int32) -> [WordRank] -> [WordRank]

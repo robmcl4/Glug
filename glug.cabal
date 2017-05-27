@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Glug
                      , Glug.Cache
+                     , Glug.CommonWords
                      , Glug.Monad
                      , Glug.Net
                      , Glug.SrtExtract
@@ -24,7 +25,6 @@ library
                      , Glug.TMDbDownloader
                      , Glug.Types
                      , Glug.WordCounter
-                     , Glug.WordTrie
                      , Glug.WordHeuristics
   other-modules:       Glug.Constants
                      , Paths_glug
