@@ -28,15 +28,12 @@ import Text.Read (readEither, readMaybe)
 
 import API.Helpers
 import API.CacheMaintenance
-import Glug (Cache, newCache)
+import Glug (Cache)
 
 
 main :: IO ()
 main = do
-    let cache = newCache cacheSize
-    mvar <- newMVar cache
-    chan <- newChan
-    maintainCache chan mvar
+    (mvar, chan) <- spinupCache
     settings <- getSettings
     runSettings settings $ app mvar chan
 
@@ -64,11 +61,6 @@ port :: IO Integer
 port = do
           portMayStr <- lookupEnv "PORT"
           return . fromMaybe 3000 $ portMayStr >>= readMaybe
-
-
--- | The max number of items in the cache
-cacheSize :: Int
-cacheSize = 256
 
 
 beforeMainLoop :: IO ()

@@ -6,6 +6,8 @@ import qualified Data.ByteString.Lazy as BSL
 
 import Test.Hspec
 
+import Data.Either (isLeft)
+
 import Glug.Cache
 import Glug.Monad
 
@@ -26,10 +28,26 @@ spec = do
           return (v1, v2)
       a `shouldBe` "examplecontent"
       b `shouldBe` "comeonandslam"
+  describe "serialize / deserialize Cache" $ do
+    it "handles one item" $ do
+      let (Right cache) = deserializeCache 100 . serializeCache $ singletonCache
+      (Right res, _) <- execMonadGlugIO cache $ tlsGetUrl "http://example.com/foo"
+      res `shouldBe` "examplecontent"
+    it "handles two items" $ do
+      let (Right cache) = deserializeCache 100 . serializeCache $ twoItemCache
+      (Right (a, b), _) <- execMonadGlugIO cache $ do
+          v1 <- tlsGetUrl "http://example.com/foo"
+          v2 <- tlsGetUrl "http://example.com/bar"
+          return (v1, v2)
+      a `shouldBe` "examplecontent"
+      b `shouldBe` "comeonandslam"
+    it "handles deserializing junk" $ do
+      let res = deserializeCache 100 "somerandomjunkthatisntacache"
+      res `shouldSatisfy` (isLeft)
+
 
 singletonCache :: Cache
 singletonCache = insertHardCache "http://example.com/foo" "examplecontent" $ newCache 100
-
 
 
 twoItemCache :: Cache

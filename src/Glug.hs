@@ -8,9 +8,10 @@ module Glug (
 , Subtitle (..)
 , IMDbId
 , ApiKey
-, countWords
 , bestCandidates
 , candidateTitles
+, countWords
+, deserializeCache
 , execMonadGlugIO
 , getSubtitles
 , getDetailsOfMovie
@@ -18,6 +19,7 @@ module Glug (
 , hoistMaybe
 , mergeCache
 , newCache
+, serializeCache
 ) where
 
 import Glug.Types

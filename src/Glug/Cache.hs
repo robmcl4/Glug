@@ -2,14 +2,17 @@
 
 module Glug.Cache (
   Cache ()
+, deserializeCache
+, insertHardCache
 , newCache
 , mergeCache
-, insertHardCache
+, serializeCache
 , tlsGetUrl
 ) where
 
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
+import qualified Data.Serialize as Ser
 
 import Control.Monad (mplus)
 import Control.Monad.IO.Class (MonadIO)
@@ -92,3 +95,22 @@ tlsGetUrl url = get >>= \cache -> case lookupCache url cache of
                                       val <- realTlsGetUrl url
                                       put $ insertSoftCache url val cache
                                       return val
+
+
+-- | Serialize a cache
+serializeCache :: Cache -> BSL.ByteString
+serializeCache c = Ser.encodeLazy (fst . next . randomGen $ c, kvs)
+    where c' = mergeCache c c -- puts the aux store into the hard store
+          kvs = Map.toList . kvStore $ c'
+
+
+-- | Deserialize a cache
+deserializeCache :: Int -> BSL.ByteString -> Either String Cache
+deserializeCache size bs = case Ser.decodeLazy bs of
+                             Right (seed, kvs) -> Right $ Cache {
+                                     kvStore = Map.fromList kvs
+                                   , randomGen = mkStdGen seed
+                                   , maxCapacity = size
+                                   , auxKvStore = Map.empty
+                                   }
+                             Left _ -> Left "could not decode cache"
