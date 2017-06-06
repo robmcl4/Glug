@@ -55,7 +55,7 @@ _inflateCache = do
 
 persistCache :: MVar Cache -> IO ()
 persistCache mvar = forever $ do
-    threadDelay $ 60 * 1000 * 1000
+    threadDelay $ 60 * 60 * 1000 * 1000
     got <- readMVar mvar
     withFile "cache.dat" WriteMode $ \f ->
         BSL.hPut f . serializeCache $ got
