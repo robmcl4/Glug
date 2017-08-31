@@ -106,7 +106,7 @@ cleanupSub sub = sub { dialogue = cleanupText . dialogue $ sub }
 
 -- | Remove all <b>, <i>, and <font color=...> tags
 cleanupText :: TS.Text -> TS.Text
-cleanupText t = removeB . removeI . removeFont $ t
+cleanupText = removeB . removeI . removeFont
     where removeFont _t | TS.null _t = _t
                         | otherwise  = TS.append before $ removeFont' after
               where (before, after) = TS.breakOn "<font color=" _t

@@ -13,11 +13,11 @@ import Data.Int (Int64)
 -- | Finds how common a word is, in terms of fuzzy membership.
 --   0 indicates no membership, 1000 indicates perfect membership.
 commonality :: T.Text -> Integer
-commonality t = toInteger $ (Map.findWithDefault 0 t wrds) * 1000 `div` 23095259356
+commonality t = toInteger $ Map.findWithDefault 0 t wrds * 1000 `div` 23095259356
 
 
 wrds :: Map.Map T.Text Int64
-wrds = Map.fromList $
+wrds = Map.fromList
   [ ("the", 23095259356)
   , ("of", 13111350970)
   , ("and", 12957046160)

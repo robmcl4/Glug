@@ -29,7 +29,7 @@ instance MonadError e (MonadGlugIO e) where
     m `catchError` f = MonadGlugIO $ runMonadGlugIO m `catchError` (runMonadGlugIO . f)
 
 instance MonadState Cache (MonadGlugIO e) where
-    get = MonadGlugIO $ S.get
+    get = MonadGlugIO S.get
     put = MonadGlugIO . S.put
 
 

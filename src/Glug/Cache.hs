@@ -59,7 +59,7 @@ insertSoftCache k v c = c { auxKvStore = Map.insert k v (auxKvStore c) }
 
 -- | Inserts a key-value pair into the long-term cache, evicting if necessary
 insertHardCache :: String -> BSL.ByteString -> Cache -> Cache
-insertHardCache k v c = if (Map.size . kvStore $ c) >= (maxCapacity c)
+insertHardCache k v c = if (Map.size . kvStore $ c) >= maxCapacity c
                           then insertHardCache k v . evictFromCache $ c
                           else c { kvStore = Map.insert k v (kvStore c) }
 
@@ -71,7 +71,7 @@ evictFromCache c = if Map.null kv
                      else c { kvStore = kv', randomGen = gen' }
     where kv = kvStore c
           (i, gen') = next . randomGen $ c
-          idx = i `mod` (Map.size kv)
+          idx = i `mod` Map.size kv
           kv' = Map.deleteAt idx kv
 
 
@@ -87,8 +87,7 @@ tlsGetUrl :: (MonadError String m, MonadIO m, MonadState Cache m) =>
                   -> m BSL.ByteString
                   -- ^ the response (cache is modified)
 tlsGetUrl url = get >>= \cache -> case lookupCache url cache of
-                                    Just x  -> do
-                                      -- cache hit
+                                    Just x  -> -- cache hit
                                       return x
                                     Nothing -> do
                                       -- cache miss
@@ -107,7 +106,7 @@ serializeCache c = Ser.encodeLazy (fst . next . randomGen $ c, kvs)
 -- | Deserialize a cache
 deserializeCache :: Int -> BSL.ByteString -> Either String Cache
 deserializeCache size bs = case Ser.decodeLazy bs of
-                             Right (seed, kvs) -> Right $ Cache {
+                             Right (seed, kvs) -> Right Cache {
                                      kvStore = Map.fromList kvs
                                    , randomGen = mkStdGen seed
                                    , maxCapacity = size

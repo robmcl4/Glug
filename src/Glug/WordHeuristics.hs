@@ -30,18 +30,18 @@ dropWordsByFrequency wcs (min_, max_) = filter (between . toInteger . WC.freq) w
 
 
 addIsCommon :: [WordRank] -> [WordRank]
-addIsCommon = addToHeuristic $ \wc -> fromIntegral $ 5 - (commonality $ WC.text wc) * 5 `div` 1000
+addIsCommon = addToHeuristic $ \wc -> fromIntegral $ 5 - commonality (WC.text wc) * 5 `div` 1000
 
 
 addSyllable :: [WordRank] -> [WordRank]
-addSyllable = addToHeuristic $ \wc -> fromIntegral $ (T.length $ WC.text wc) `div` 3
+addSyllable = addToHeuristic $ \wc -> fromIntegral $ T.length (WC.text wc) `div` 3
 
 
 addTimeGap :: [WordRank] -> [WordRank]
 addTimeGap wrs = addToHeuristic timegap wrs
     where weight = 5
-          timegap wc = round $ (mingap wc) / (expected wc) * weight
-          expected wc = maxtime /  (fromIntegral $ WC.freq wc)
+          timegap wc = round $ mingap wc / expected wc * weight
+          expected wc = maxtime / fromIntegral (WC.freq wc)
           -- TODO make this safe for words that appear only once (?)
           mingap = toRational . minimum . difflist . WC.occurrences
           difflist [] = []

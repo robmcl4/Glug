@@ -81,21 +81,39 @@ getDownloadLink (TS.TagOpen name attrs:xs)
 getDownloadLink (_:xs) = getDownloadLink xs
 
 
+-- gets subtitle links, prioritized by non-HoH enhanced first
 getSubLinks :: [TS.Tag T.Text] -> Either String [T.Text]
-getSubLinks [] = Right []
-getSubLinks (TS.TagOpen name1 attrs1:
-             TS.TagText _:
-             TS.TagOpen name2 attrs2:
-             TS.TagText engl:
+getSubLinks ts = prioritize <$> getSubLinks' ts
+  where -- construct prioritization using an accumulator to collect non-priority
+        -- on descent, and appending prioritized to head on recursive ascent
+        prioritize xs = prioritize' xs []
+        prioritize' [] acc = acc
+        prioritize' ((x, False):xs) acc = x : prioritize' xs acc
+        prioritize' ((x, True):xs)  acc = prioritize' xs (x:acc)
+
+
+-- gets subtitle links in the form of (url, isHardOfHearing)
+getSubLinks' :: [TS.Tag T.Text] -> Either String [(T.Text, Bool)]
+getSubLinks' [] = Right []
+getSubLinks' (TS.TagOpen name1 attrs1: -- <a {attrs}>
+             TS.TagText _: -- whitespace
+             TS.TagOpen name2 attrs2: -- <span {attrs}>
+             TS.TagText engl: -- language
              ts)
     | name1 == "a" && name2 == "span" && removeSpaces engl == "English" && attrs2 == [("class", "l r positive-icon")]
                 = do
                     hrf <- eitherAttr attrs1 "href"
-                    rest <- getSubLinks ts
-                    return (hrf:rest)
-    | otherwise = getSubLinks (TS.TagOpen name2 attrs2:(TS.TagText engl:ts))
+                    rest <- getSubLinks' ts
+                    return ((hrf, findIsHoHEnhanced ts):rest)
+    | otherwise = getSubLinks' (TS.TagOpen name2 attrs2:(TS.TagText engl:ts))
   where removeSpaces = T.filter (not . isSpace)
-getSubLinks (_:ts) = getSubLinks ts
+        findIsHoHEnhanced [] = False
+        findIsHoHEnhanced (TS.TagOpen name1' attrs1':ts')
+            | name1' == "td" && attrs1' == [("class", "a40")] = False
+            | name1' == "td" && attrs1' == [("class", "a41")] = True
+            | otherwise = findIsHoHEnhanced ts'
+        findIsHoHEnhanced (_:ts') = findIsHoHEnhanced ts'
+getSubLinks' (_:ts) = getSubLinks' ts
 
 
 getTitles :: [TS.Tag T.Text] -> Either String [(T.Text, T.Text, Integer)]
