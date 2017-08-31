@@ -39,7 +39,8 @@ parseSrtFromZip zipbs = do
 bsToSubs :: MonadError String m => B.ByteString -> m SRT.Subtitles
 bsToSubs bs = do
     t <- tag "decoding" . hoistEither . eitherShow . decode' $ bs
-    tag "using srt parser" . hoistEither . parseOnly SRT.parseSRT . T.toStrict $ t
+    tag "using srt parser" . hoistEither . parseOnly SRT.parseSRT .
+        cleanupNewlines . T.toStrict $ t
   where bom = B.unpack $ B.take 3 bs
         decode | take 2 bom == [0xFE, 0xFF] = Enc.decodeUtf16BE . B.drop 2
                | take 2 bom == [0xFF, 0xFE] = Enc.decodeUtf16LE . B.drop 2
@@ -47,6 +48,7 @@ bsToSubs bs = do
                | otherwise                    = Enc.decodeUtf8
         decode' :: B.ByteString -> Either Enc.UnicodeException T.Text
         decode' = unsafeDupablePerformIO . try . evaluate . decode -- D:
+        cleanupNewlines = TS.replace "\n\n\n" "\n\n" . TS.replace "\r\n\r\n\r\n" "\r\n\r\n"
 
 
 getSrtBS :: MonadError String m => B.ByteString -> m B.ByteString
